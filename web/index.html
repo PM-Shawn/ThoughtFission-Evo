@@ -1,0 +1,3679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThoughtFission — 思维裂变引擎</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ── Canvas ── */
+#canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+}
+
+/* ── Top Bar ── */
+.top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10;
+    background: linear-gradient(180deg, rgba(10,10,15,0.95) 0%, transparent 100%);
+}
+.logo-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.logo {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+}
+.stats {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    color: #666;
+}
+.stats span { color: #00d4ff; font-weight: 600; }
+
+/* ── Input Area ── */
+.input-area {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+.scenario-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.scenario-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #555;
+    color: #aaa;
+    transition: all 0.25s;
+    user-select: none;
+}
+.scenario-chip:hover { border-color: #888; color: #ccc; }
+.scenario-chip.selected { border-color: #7b2ff7; color: #fff; background: rgba(123,47,247,0.15); transform: scale(1.05); }
+
+.input-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 28px;
+    padding: 4px 6px 4px 20px;
+    width: 600px;
+    max-width: 90vw;
+    backdrop-filter: blur(20px);
+    transition: border-color 0.3s;
+}
+.input-box:focus-within { border-color: rgba(0,212,255,0.5); }
+.input-box input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+}
+.input-box input::placeholder { color: #555; transition: opacity 0.3s; }
+.input-box input.placeholder-fade::placeholder { opacity: 0; }
+.input-box button {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: none;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+.input-box button:hover { transform: scale(1.1); }
+.input-box button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ── Result Panel ── */
+.result-panel {
+    position: fixed;
+    right: -520px;
+    top: 64px;
+    bottom: 64px;
+    width: 500px;
+    background: rgba(15,15,25,0.95);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    border-radius: 16px 0 0 16px;
+    padding: 24px;
+    z-index: 20;
+    transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+}
+.result-panel.open { right: 0; }
+.result-panel h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.result-section {
+    margin-bottom: 20px;
+    padding: 14px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.result-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.result-section p, .result-section li {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #aaa;
+}
+.result-section ul { padding-left: 16px; }
+.confidence-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.1);
+    margin-top: 8px;
+}
+.confidence-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s;
+}
+.close-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* ── Phase Indicator ── */
+.phase-indicator {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 13px;
+    color: #666;
+    background: rgba(10,10,15,0.9);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    display: none;
+}
+.phase-indicator.active { display: block; }
+.phase-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #00d4ff;
+    margin-right: 8px;
+    animation: pulse 1s infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* ── Help Button ── */
+.help-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #aaa;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.help-btn:hover { color: #00d4ff; border-color: rgba(0,212,255,0.4); }
+
+.help-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.help-overlay.open { display: flex; }
+.help-card {
+    background: #141420;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 560px;
+    max-width: 92vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #ccc;
+    line-height: 1.7;
+}
+.help-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.help-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin: 18px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.help-card h3 .phase-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+.help-card p, .help-card li { font-size: 13px; color: #aaa; }
+.help-card ul { padding-left: 18px; margin: 4px 0 8px; }
+.help-card li { margin: 3px 0; }
+.help-card .help-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin: 16px 0;
+}
+.help-card .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 8px 0;
+}
+.help-card .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #aaa;
+}
+.help-card .legend-line {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+}
+.help-card .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid;
+}
+.help-card .close-help {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+}
+.help-card .close-help:hover { color: #fff; }
+.help-card .interaction-hint {
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: #888;
+}
+
+/* ── Settings ── */
+.settings-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #aaa;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.settings-btn:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+.settings-btn.configured { color: #44ff88; border-color: rgba(68,255,136,0.3); }
+
+.settings-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.settings-overlay.open { display: flex; }
+
+.settings-card {
+    background: #141420;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 440px;
+    max-width: 92vw;
+}
+.settings-card h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #fff;
+}
+.settings-field {
+    margin-bottom: 16px;
+}
+.settings-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.settings-field input, .settings-field select {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: 'SF Mono', monospace;
+}
+.settings-field input:focus, .settings-field select:focus {
+    border-color: rgba(0,212,255,0.5);
+}
+.settings-field input::placeholder { color: #444; }
+.settings-field .hint {
+    font-size: 11px;
+    color: #555;
+    margin-top: 4px;
+}
+.settings-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.settings-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-save {
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    color: #fff;
+}
+.btn-save:hover { transform: scale(1.02); }
+.btn-cancel {
+    background: rgba(255,255,255,0.06);
+    color: #888;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+}
+.btn-cancel:hover { color: #fff; }
+.settings-status {
+    font-size: 12px;
+    margin-top: 12px;
+    text-align: center;
+    min-height: 18px;
+}
+.settings-presets {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.preset-chip {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #888;
+    transition: all 0.2s;
+    user-select: none;
+}
+.preset-chip:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+/* ── Node Context Menu ── */
+.node-menu {
+    position: fixed;
+    z-index: 50;
+    background: rgba(20,20,35,0.95);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 160px;
+    backdrop-filter: blur(20px);
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.node-menu.open { display: block; }
+.node-menu-header {
+    padding: 8px 12px 6px;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 4px;
+}
+.node-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s;
+}
+.node-menu-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.node-menu-item.danger:hover { background: rgba(255,68,68,0.15); color: #ff4444; }
+.node-menu-icon { font-size: 14px; width: 20px; text-align: center; }
+.node-menu-item .hint { font-size: 10px; color: #555; margin-left: auto; }
+
+/* ── Tooltip on hover ── */
+.node-tooltip {
+    position: fixed;
+    z-index: 40;
+    background: rgba(20,20,35,0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 10px 14px;
+    max-width: 280px;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+    display: none;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+}
+.node-tooltip.visible { display: block; }
+.node-tooltip .tt-title { font-weight: 600; color: #fff; margin-bottom: 4px; }
+.node-tooltip .tt-confidence { margin-top: 6px; font-size: 11px; }
+
+/* ── Detail Card (click-to-inspect) ── */
+.detail-card {
+    position: fixed;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    background: rgba(15, 15, 25, 0.95);
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 20px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    color: #ddd;
+    font-size: 13px;
+    line-height: 1.6;
+}
+.detail-card .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    cursor: pointer;
+}
+.detail-card .close-btn:hover { color: #fff; }
+.detail-card h4 { color: #fff; margin-bottom: 8px; font-size: 15px; }
+.detail-card .methodology { color: #888; font-size: 12px; margin-bottom: 12px; font-style: italic; }
+.detail-card .finding { color: #bbb; margin-bottom: 12px; }
+.detail-card .confidence-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.detail-card .confidence-bar { flex: 1; height: 6px; background: #1a1a2e; border-radius: 3px; overflow: hidden; }
+.detail-card .confidence-fill { height: 100%; border-radius: 3px; }
+.detail-card .kp-list { margin: 8px 0; padding-left: 16px; }
+.detail-card .kp-list li { margin: 4px 0; color: #aaa; font-size: 12px; }
+.detail-card .sources-list { margin-top: 8px; }
+.detail-card .sources-list a { color: #00d4ff; font-size: 12px; display: block; margin: 4px 0; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-card .sources-list a:hover { text-decoration: underline; }
+.detail-card .section-title { color: #999; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 6px; }
+.card-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2a2a3e;
+}
+.card-action-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 8px;
+    border: 1px solid #2a2a3e;
+    background: rgba(255,255,255,0.03);
+    color: #ccc;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.card-action-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.card-action-btn.drill:hover { border-color: #00d4ff; color: #00d4ff; }
+.card-action-btn.redirect:hover { border-color: #ffaa00; color: #ffaa00; }
+.card-action-btn.dismiss:hover { border-color: #ff4444; color: #ff4444; }
+
+/* ── Debate Bubbles ── */
+.debate-container {
+    position: fixed;
+    left: 16px;
+    top: 100px;
+    bottom: 100px;
+    width: 280px;
+    z-index: 25;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+.debate-container.active { display: flex; }
+
+.debate-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #ddd;
+    animation: bubbleIn 0.4s ease-out;
+    position: relative;
+}
+.debate-bubble .db-speaker {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.debate-bubble .db-stance {
+    font-size: 10px;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+.debate-bubble.support { background: rgba(68,255,136,0.08); border-left: 3px solid #44ff88; }
+.debate-bubble.support .db-stance { background: rgba(68,255,136,0.2); color: #44ff88; }
+.debate-bubble.oppose { background: rgba(255,68,68,0.08); border-left: 3px solid #ff4444; }
+.debate-bubble.oppose .db-stance { background: rgba(255,68,68,0.2); color: #ff4444; }
+.debate-bubble.concede { background: rgba(255,170,0,0.08); border-left: 3px solid #ffaa00; }
+.debate-bubble.concede .db-stance { background: rgba(255,170,0,0.2); color: #ffaa00; }
+
+.debate-verdict {
+    padding: 12px 14px;
+    background: rgba(123,47,247,0.1);
+    border: 1px solid rgba(123,47,247,0.3);
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #ddd;
+    animation: bubbleIn 0.4s ease-out;
+}
+.debate-verdict .dv-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #7b2ff7;
+    margin-bottom: 6px;
+}
+
+@keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Deep Report Sections ── */
+.report-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1a1a2e;
+}
+.report-section:last-child { border-bottom: none; }
+.report-section h4 { color: #e0e0e0; margin-bottom: 8px; font-size: 14px; }
+.report-section p { color: #bbb; font-size: 13px; line-height: 1.7; }
+
+.dimension-detail {
+    margin: 8px 0;
+    border: 1px solid #1a1a2e;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.dimension-detail summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    color: #ddd;
+    font-size: 13px;
+    background: rgba(255,255,255,0.03);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.dimension-detail summary:hover { background: rgba(255,255,255,0.06); }
+.dimension-body {
+    padding: 12px 14px;
+    border-top: 1px solid #1a1a2e;
+}
+.risk-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.risk-badge.risk-high { background: rgba(255,68,68,0.2); color: #ff4444; }
+.risk-badge.risk-medium { background: rgba(255,170,0,0.2); color: #ffaa00; }
+.risk-badge.risk-low { background: rgba(68,255,136,0.2); color: #44ff88; }
+
+.evidence-list {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #999;
+}
+.evidence-list ul { margin: 4px 0 0 16px; }
+.evidence-list li { margin: 4px 0; line-height: 1.5; }
+
+/* ── New Report Styles ── */
+/* Report Header */
+.report-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #1a1a2e;
+}
+.report-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+.report-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 12px;
+}
+.report-confidence {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #888;
+}
+.conf-bar {
+    flex: 1;
+    height: 8px;
+    background: #1a1a2e;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.conf-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s;
+}
+
+/* Report Sections */
+.section-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1a1a2e;
+}
+.section-body {
+    color: #bbb;
+    font-size: 13px;
+    line-height: 1.8;
+}
+.section-body p { margin-bottom: 8px; }
+.section-body strong { color: #ddd; }
+.section-body a { color: #00d4ff; }
+
+/* Expert Sections */
+.expert-section {
+    margin: 10px 0;
+    border: 1px solid #1a1a2e;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.expert-section summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #ddd;
+    background: rgba(255,255,255,0.02);
+    transition: background 0.2s;
+}
+.expert-section summary:hover { background: rgba(255,255,255,0.05); }
+.expert-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.expert-name { flex: 1; font-weight: 600; }
+.expert-conf { font-size: 13px; font-weight: 600; }
+
+.expert-body {
+    padding: 16px;
+    border-top: 1px solid #1a1a2e;
+}
+.expert-methodology {
+    font-size: 12px;
+    color: #777;
+    font-style: italic;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+}
+.expert-finding {
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+.expert-detailed {
+    color: #bbb;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-bottom: 12px;
+}
+.expert-detailed p { margin-bottom: 8px; }
+.expert-detailed strong { color: #ddd; }
+.expert-detailed a { color: #00d4ff; }
+.expert-detailed table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.expert-detailed td, .expert-detailed th { padding: 6px 12px; border: 1px solid #2a2a3e; font-size: 12px; }
+
+/* Key Points */
+.expert-kps { margin-top: 12px; }
+.kp-item {
+    display: flex;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: 12px;
+}
+.kp-bullet { color: #00d4ff; flex-shrink: 0; margin-top: 2px; }
+.kp-text { color: #aaa; }
+.kp-sources { margin-top: 4px; }
+.kp-sources a {
+    color: #556677;
+    font-size: 11px;
+    margin-right: 8px;
+    text-decoration: none;
+}
+.kp-sources a:hover { color: #00d4ff; text-decoration: underline; }
+
+/* Action List */
+.action-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #bbb;
+    font-size: 13px;
+}
+.action-list li { margin: 8px 0; line-height: 1.6; }
+
+/* Dissent List */
+.dissent-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #999;
+    font-size: 13px;
+}
+.dissent-list li { margin: 6px 0; }
+
+/* Sources Grid */
+.sources-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.source-domain {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1a1a2e;
+    border-radius: 6px;
+    font-size: 11px;
+}
+.domain-name { color: #888; }
+.domain-count {
+    background: rgba(0,212,255,0.15);
+    color: #00d4ff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* ── Round Log Panel ── */
+#stat-round {
+    background: rgba(123, 47, 247, 0.15);
+    color: #7b2ff7;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#stat-round:hover {
+    background: rgba(123, 47, 247, 0.3);
+}
+.round-log-panel {
+    position: fixed;
+    top: 60px;
+    right: 24px;
+    width: 420px;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: rgba(15, 15, 25, 0.95);
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 0;
+    z-index: 90;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.round-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #2a2a3e;
+    position: sticky;
+    top: 0;
+    background: rgba(15, 15, 25, 0.98);
+    z-index: 1;
+}
+.round-log-header h3 {
+    color: #e0e0e0;
+    font-size: 15px;
+    margin: 0;
+}
+.round-log-content {
+    padding: 16px 20px;
+}
+
+.log-round-group {
+    margin-bottom: 20px;
+}
+.log-round-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #7b2ff7;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1a1a2e;
+}
+.log-entry {
+    display: flex;
+    gap: 10px;
+    margin: 8px 0;
+    font-size: 12px;
+    line-height: 1.6;
+}
+.log-time {
+    color: #555;
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 55px;
+}
+.log-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.log-text {
+    color: #bbb;
+    flex: 1;
+}
+.log-text strong { color: #ddd; }
+
+.log-assessment {
+    margin: 8px 0;
+    padding: 10px 14px;
+    background: rgba(123, 47, 247, 0.08);
+    border-left: 3px solid #7b2ff7;
+    border-radius: 0 8px 8px 0;
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.6;
+}
+.log-action {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 6px 0 6px 20px;
+    font-size: 12px;
+}
+.log-action-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.log-action-badge.spawn { background: rgba(0,212,255,0.15); color: #00d4ff; }
+.log-action-badge.redirect { background: rgba(255,170,0,0.15); color: #ffaa00; }
+.log-action-badge.drop { background: rgba(255,68,68,0.15); color: #ff4444; }
+.log-verdict {
+    margin: 8px 0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.log-verdict.sufficient { background: rgba(68,255,136,0.1); color: #44ff88; }
+.log-verdict.insufficient { background: rgba(255,170,0,0.1); color: #ffaa00; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="top-bar">
+    <div class="logo-group">
+        <div class="logo">ThoughtFission</div>
+        <button class="help-btn" onclick="document.getElementById('help-overlay').classList.add('open')" title="玩法说明">?</button>
+        <button class="settings-btn" id="settings-btn" onclick="openSettings()" title="模型设置">&#9881;</button>
+    </div>
+    <div class="stats">
+        Agents: <span id="stat-agents">0</span>
+        &nbsp;|&nbsp;
+        Tools: <span id="stat-tools">0</span>
+        &nbsp;|&nbsp;
+        Tokens: <span id="stat-tokens">0</span>
+        &nbsp;|&nbsp;
+        <span id="stat-timer" style="color:#ffaa00"></span>
+        &nbsp;
+        <span id="stat-round" style="display:none" onclick="showRoundLog()" title="点击查看调研日志">Round <span id="round-current">1</span>/<span id="round-max">4</span></span>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="help-overlay" id="help-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="help-card" style="position:relative">
+        <button class="close-help" onclick="document.getElementById('help-overlay').classList.remove('open')">&times;</button>
+        <h2>ThoughtFission 思维裂变引擎</h2>
+        <p>将一个问题裂变为多个专家视角，通过<strong style="color:#fff">协作、对抗、迭代</strong>产生深度洞察。</p>
+
+        <hr class="help-divider">
+
+        <h3><span class="phase-num" style="background:#7b2ff7">1</span> 设计 — 主分析师设计调研团队</h3>
+        <p>输入问题后，主分析师自动设计调研团队，为每位专家分配具体任务和方法论。</p>
+
+        <h3><span class="phase-num" style="background:#00d4ff">2</span> 调研 — 专家并行执行任务</h3>
+        <p>所有专家并行工作，可调用搜索工具获取实时信息，各自形成独立发现和置信度。</p>
+
+        <h3><span class="phase-num" style="background:#ffaa00">3</span> 评判 — 主分析师评估结果质量</h3>
+        <p>主分析师审查所有专家的发现，评估覆盖度和质量，决定是否需要补充调研。</p>
+
+        <h3><span class="phase-num" style="background:#ff6bff">4</span> 进化 — 按需补充/重定向/移除专家</h3>
+        <p>根据评判结果，主分析师可以：</p>
+        <ul>
+            <li><span style="color:#44ff88">补充 (spawn)</span> — 新增专家填补空白</li>
+            <li><span style="color:#ffaa00">重定向 (redirect)</span> — 调整专家分析方向</li>
+            <li><span style="color:#ff4444">移除 (drop)</span> — 淘汰低质量专家</li>
+        </ul>
+
+        <h3><span class="phase-num" style="background:#44ff88">5</span> 汇报 — 形成最终结论</h3>
+        <p>汇总所有调研发现，形成最终结论。多轮迭代确保结论的深度和广度。</p>
+
+        <hr class="help-divider">
+        <h3 style="margin-top:12px">角色说明</h3>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="border-color:#7b2ff7;background:#7b2ff722"></div> 角色由AI动态生成</div>
+        </div>
+
+        <h3 style="margin-top:12px">连线含义</h3>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-line" style="background:#7b2ff7"></div> 裂变连接</div>
+            <div class="legend-item"><div class="legend-line" style="background:#44ff88"></div> 认同</div>
+            <div class="legend-item"><div class="legend-line" style="background:#ff4444;border-top:2px dashed #ff4444;height:0"></div> 质疑</div>
+            <div class="legend-item"><div class="legend-line" style="background:#ffaa00;border-top:2px dotted #ffaa00;height:0"></div> 补充</div>
+        </div>
+
+        <hr class="help-divider">
+        <h3 style="margin-top:12px">Agent 操作</h3>
+        <p>左键点击已完成的 Agent 节点，详情卡片顶部显示操作按钮：</p>
+        <ul>
+            <li><span style="color:#00d4ff">深钻 (Deep Drill)</span> — 对该 Agent 的发现进行二次裂变，子专家实时出现在画布上展开更细致的分析</li>
+            <li><span style="color:#ffaa00">重定向 (Redirect)</span> — 输入新的分析方向，该 Agent 按你的提示重新裂变，子专家同样实时展示在画布上</li>
+            <li><span style="color:#ff4444">移除 (Dismiss)</span> — 将该 Agent 从画布上移除，不参与后续汇报</li>
+        </ul>
+
+        <hr class="help-divider">
+        <div class="interaction-hint">
+            <strong style="color:#00d4ff">画布交互:</strong><br>
+            &#8226; 左键点击节点查看详情和操作按钮<br>
+            &#8226; 滚轮缩放画布 &nbsp; &#8226; 拖拽节点调整布局 &nbsp; &#8226; 拖拽空白区域平移视角
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-card">
+        <h2>&#9881; 模型设置</h2>
+        <div class="settings-presets">
+            <span class="preset-chip" onclick="applyPreset('openrouter')">OpenRouter</span>
+            <span class="preset-chip" onclick="applyPreset('deepseek')">DeepSeek</span>
+            <span class="preset-chip" onclick="applyPreset('groq')">Groq</span>
+            <span class="preset-chip" onclick="applyPreset('together')">Together AI</span>
+            <span class="preset-chip" onclick="applyPreset('local')">Ollama (本地)</span>
+        </div>
+        <div class="settings-field">
+            <label>API Key</label>
+            <input type="password" id="s-apikey" placeholder="sk-or-v1-xxxxx">
+        </div>
+        <div class="settings-field">
+            <label>Base URL</label>
+            <input type="text" id="s-baseurl" placeholder="https://openrouter.ai/api/v1">
+            <div class="hint">OpenAI 兼容的 API 地址</div>
+        </div>
+        <div class="settings-field">
+            <label>模型名称</label>
+            <input type="text" id="s-model" placeholder="stepfun/step-3.5-flash:free">
+            <div class="hint">模型 ID，如 stepfun/step-3.5-flash:free, deepseek/deepseek-chat</div>
+        </div>
+
+        <h3 style="margin:16px 0 8px;font-size:14px;color:#aaa;border-top:1px solid #333;padding-top:12px">&#x1F50D; 搜索引擎</h3>
+        <div class="settings-presets">
+            <span class="preset-chip" onclick="applySearchPreset('tavily')" id="sp-tavily">Tavily</span>
+            <span class="preset-chip" onclick="applySearchPreset('bing')" id="sp-bing">Bing</span>
+            <span class="preset-chip" onclick="applySearchPreset('duckduckgo')" id="sp-ddg">DuckDuckGo (免费)</span>
+        </div>
+        <div class="settings-field" id="search-key-field">
+            <label>搜索 API Key</label>
+            <input type="password" id="s-search-key" placeholder="tvly-xxxxx">
+            <div class="hint" id="s-search-hint">Tavily: <a href="https://tavily.com" target="_blank" style="color:#00d4ff">tavily.com</a> 免费注册获取 Key</div>
+        </div>
+        <input type="hidden" id="s-search-provider" value="tavily">
+
+        <div class="settings-actions">
+            <button class="btn-cancel" onclick="closeSettings()">取消</button>
+            <button class="btn-save" onclick="saveSettings()">保存</button>
+        </div>
+        <div class="settings-status" id="settings-status"></div>
+    </div>
+</div>
+
+<!-- Debate Panel -->
+<div class="debate-container" id="debate-container"></div>
+
+<!-- Node Context Menu (removed — actions are now in the detail card) -->
+<div class="node-menu" id="node-menu" style="display:none"></div>
+
+<!-- Node Tooltip -->
+<div class="node-tooltip" id="node-tooltip">
+    <div class="tt-title" id="tt-title"></div>
+    <div id="tt-body"></div>
+    <div class="tt-confidence" id="tt-conf"></div>
+</div>
+
+<!-- Detail Card (click-to-inspect) -->
+<div class="detail-card" id="detailCard" style="display:none"></div>
+
+<!-- Round Log Panel -->
+<div class="round-log-panel" id="roundLogPanel" style="display:none">
+    <div class="round-log-header">
+        <h3>📋 调研日志</h3>
+        <button class="close-btn" onclick="hideRoundLog()">×</button>
+    </div>
+    <div class="round-log-content" id="roundLogContent"></div>
+</div>
+
+<div class="phase-indicator" id="phase">
+    <span class="phase-dot"></span>
+    <span id="phase-text">Initializing...</span>
+</div>
+
+<div class="input-area" id="input-area">
+    <div class="scenario-bar">
+        <div class="scenario-chip" data-hint="" onclick="selectScenario(this)">🧠 通用</div>
+        <div class="scenario-chip" data-hint="这是一个热点事件，请从时间线、利益分析、舆论观察、历史类比、辟谣验证等角度分析" onclick="selectScenario(this)">🔥 热点</div>
+        <div class="scenario-chip" data-hint="这是一个人物分析，请从履历、关系网络、争议、成就、公众评价等角度分析" onclick="selectScenario(this)">👤 人物</div>
+        <div class="scenario-chip" data-hint="这是股票/投资分析，请从基本面、技术面、消息面、风险审计、量化指标等角度分析" onclick="selectScenario(this)">📈 股票</div>
+        <div class="scenario-chip" data-hint="这是八卦/娱乐事件，请从线索搜集、时间线、知情人视角、辟谣检查、吃瓜总结等角度分析" onclick="selectScenario(this)">💬 八卦</div>
+    </div>
+    <div class="input-box">
+        <input id="question" type="text" placeholder="输入一个热点事件，AI调查团帮你多角度解剖" autofocus
+               onkeydown="if(event.key==='Enter')startThink()">
+        <button id="btn-go" onclick="startThink()">⚡</button>
+    </div>
+</div>
+
+<div class="result-panel" id="result-panel">
+    <button class="close-panel" onclick="closePanel()">&times;</button>
+    <div id="result-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  Canvas — Neural Graph Visualization
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Dynamic Color Palette ──
+const COLOR_PALETTE = [
+    '#00d4ff', '#ff6bff', '#ff4444', '#44ff88', '#ffaa00',
+    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7',
+];
+const agentColors = {}; // agent_id → color
+let colorIndex = 0;
+
+function getAgentColor(agentId) {
+    if (agentId === 'supervisor' || agentId === 'supervisor_judge') return '#7b2ff7';
+    if (agentId === 'synthesis') return '#ffffff';
+    if (!agentColors[agentId]) {
+        agentColors[agentId] = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+        colorIndex++;
+    }
+    return agentColors[agentId];
+}
+
+// Legacy compat for tool nodes
+const TOOL_COLOR = '#334455';
+
+// ── Node Class ──
+class Node {
+    constructor(id, label, type, methodology, x, y) {
+        this.id = id;
+        this.label = label;
+        this.type = type;        // supervisor | agent | tool | synthesis
+        this.methodology = methodology || '';
+        this.x = x;
+        this.y = y;
+        this.targetX = x;
+        this.targetY = y;
+        this.radius = type === 'supervisor' ? 48 : type === 'synthesis' ? 36 : type === 'tool' ? 14 : type === 'insight' ? 14 : type === 'source' ? 8 : 24;
+        this.color = type === 'tool' ? TOOL_COLOR : type === 'source' ? '#556677' : getAgentColor(id);
+        this.alpha = 0;
+        this.targetAlpha = 1;
+        this.progress = 0;      // 0-1 progress ring
+        this.status = 'idle';   // idle | thinking | done | error
+        this.finding = '';
+        this.confidence = 0;
+        this.activity = '';     // current activity text (e.g. "搜索中...", "分析中...")
+        this.toolHistory = [];  // [{tool, args, result}] history of tool calls
+        this.sources = [];      // [{title, url}] data sources from web searches
+        this.peerEvals = [];    // [{evaluator, stance, reasoning, strengths, weaknesses}] received evaluations
+        this.revisedFinding = null; // {action, revised_finding, original_confidence, revised_confidence, response_to_critics, key_points}
+        this.glowPhase = Math.random() * Math.PI * 2;
+        this.pulseSpeed = 0.02 + Math.random() * 0.02;
+    }
+
+    update() {
+        this.x += (this.targetX - this.x) * 0.06;
+        this.y += (this.targetY - this.y) * 0.06;
+        this.alpha += (this.targetAlpha - this.alpha) * 0.08;
+        this.glowPhase += this.pulseSpeed;
+    }
+
+    draw(ctx) {
+        if (this.alpha < 0.01) return;
+        const a = this.alpha;
+        const glow = 0.5 + 0.5 * Math.sin(this.glowPhase);
+
+        ctx.save();
+        ctx.globalAlpha = a;
+
+        // Insight node (knowledge graph)
+        if (this.type === 'insight') {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color + '40';
+            ctx.fill();
+            ctx.strokeStyle = this.color + '80';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.label.slice(0, 8), this.x, this.y + this.radius + 12);
+            ctx.restore();
+            return;
+        }
+        // Source node (knowledge graph)
+        if (this.type === 'source') {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#55667740';
+            ctx.fill();
+            ctx.strokeStyle = '#55667780';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = '#666';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.label.slice(0, 6), this.x, this.y + this.radius + 10);
+            ctx.restore();
+            return;
+        }
+
+        // Outer glow
+        if (this.status === 'thinking') {
+            const grad = ctx.createRadialGradient(this.x, this.y, this.radius, this.x, this.y, this.radius * 3);
+            grad.addColorStop(0, this.color + '40');
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Node body
+        const bodyGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+        bodyGrad.addColorStop(0, this.color + '30');
+        bodyGrad.addColorStop(1, this.color + '08');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = this.color + (this.status === 'thinking' ? 'cc' : '66');
+        ctx.lineWidth = this.type === 'tool' ? 1 : 2;
+        ctx.stroke();
+
+        // Progress ring (thinking) — uses faction color, spinning animation
+        if (this.status === 'thinking' && this.progress < 1) {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            const spin = (Date.now() / 1000) * 2;  // spinning effect
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius + 5, spin, spin + Math.PI * 2 * Math.max(this.progress, 0.2));
+            ctx.stroke();
+        }
+
+        // Confidence ring (done) — white arc shows confidence, avoids color confusion
+        if (this.status === 'done' && this.confidence > 0) {
+            // Background track (dim)
+            ctx.strokeStyle = '#ffffff18';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
+            ctx.stroke();
+            // Confidence arc (bright white)
+            ctx.strokeStyle = '#ffffffcc';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * this.confidence);
+            ctx.stroke();
+            // Confidence % text
+            ctx.fillStyle = '#ffffff88';
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText((this.confidence * 100).toFixed(0) + '%', this.x, this.y + this.radius + 18);
+        }
+
+        // Drilled indicator (left-upper corner magnifying glass)
+        if (this._drilled) {
+            const dx = this.x - this.radius * 0.6;
+            const dy = this.y - this.radius * 0.6;
+            ctx.fillStyle = '#7b2ff7';
+            ctx.beginPath();
+            ctx.arc(dx, dy, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔬', dx, dy);
+        }
+
+        // Done checkmark
+        if (this.status === 'done') {
+            const cx = this.x + this.radius * 0.6;
+            const cy = this.y - this.radius * 0.6;
+            ctx.fillStyle = '#44ff88';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx - 3, cy);
+            ctx.lineTo(cx - 1, cy + 3);
+            ctx.lineTo(cx + 3.5, cy - 2.5);
+            ctx.stroke();
+        }
+
+        // Error X mark
+        if (this.status === 'error') {
+            const cx = this.x + this.radius * 0.6;
+            const cy = this.y - this.radius * 0.6;
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx - 3, cy - 3); ctx.lineTo(cx + 3, cy + 3);
+            ctx.moveTo(cx + 3, cy - 3); ctx.lineTo(cx - 3, cy + 3);
+            ctx.stroke();
+        }
+
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.font = `${this.type === 'tool' ? 10 : 12}px -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const maxWidth = this.radius * 1.6;
+        const displayLabel = this.label.length > 6 ? this.label.slice(0, 5) + '…' : this.label;
+        ctx.fillText(displayLabel, this.x, this.y);
+
+        // Methodology / type label below
+        if (this.type !== 'tool') {
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = this.color + '88';
+            const typeLabel = this.type === 'supervisor' ? '主分析师' : this.type === 'synthesis' ? '汇报' : (this.methodology || '');
+            if (typeLabel) {
+                const truncLabel = typeLabel.length > 8 ? typeLabel.slice(0, 7) + '…' : typeLabel;
+                ctx.fillText(truncLabel, this.x, this.y + this.radius + (this.status === 'done' && this.confidence > 0 ? 28 : 14));
+            }
+        }
+
+        // Activity text below (shows what agent is doing)
+        if (this.activity && this.status === 'thinking') {
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.fillStyle = '#ffffff66';
+            const actLabel = this.activity.length > 16 ? this.activity.slice(0, 15) + '…' : this.activity;
+            ctx.fillText(actLabel, this.x, this.y + this.radius + 28);
+        }
+
+        ctx.restore();
+    }
+}
+
+// ── Edge Class ──
+class Edge {
+    constructor(from, to, type, label) {
+        this.from = from;
+        this.to = to;
+        this.type = type;   // fission | tool | synthesis | conflict | eval_agree | eval_disagree | eval_supplement
+        this.label = label || '';  // optional label text on edge
+        this.alpha = 0;
+        this.targetAlpha = 0.6;
+        this.flowOffset = Math.random() * 100;
+        this.flowSpeed = 0.5 + Math.random() * 0.5;
+    }
+
+    update() {
+        this.alpha += (this.targetAlpha - this.alpha) * 0.08;
+        this.flowOffset += this.flowSpeed;
+    }
+
+    draw(ctx) {
+        if (this.alpha < 0.01) return;
+        const fromNode = nodes.get(this.from);
+        const toNode = nodes.get(this.to);
+        if (!fromNode || !toNode) return;
+
+        ctx.save();
+        ctx.globalAlpha = this.alpha * fromNode.alpha * toNode.alpha;
+
+        // Knowledge edge (thin, low opacity, dashed)
+        if (this.type === 'knowledge') {
+            const kColor = toNode.color || '#556677';
+            // Parse hex to rgb for rgba
+            const kr = parseInt(kColor.slice(1,3), 16) || 85;
+            const kg = parseInt(kColor.slice(3,5), 16) || 102;
+            const kb = parseInt(kColor.slice(5,7), 16) || 119;
+            ctx.strokeStyle = `rgba(${kr},${kg},${kb},${0.15 * this.alpha})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 3]);
+            ctx.beginPath();
+            ctx.moveTo(fromNode.x, fromNode.y);
+            ctx.lineTo(toNode.x, toNode.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+            return;
+        }
+
+        // Color by type
+        const EVAL_COLORS = {
+            eval_agree: '#44ff88',
+            eval_disagree: '#ff4444',
+            eval_supplement: '#ffaa00',
+            conflict: '#ff4444',
+        };
+        const color = EVAL_COLORS[this.type] || (toNode.color || '#334455');
+
+        // Line style
+        ctx.strokeStyle = color + '44';
+        const isEval = this.type.startsWith('eval_');
+        ctx.lineWidth = isEval ? 2 : this.type === 'conflict' ? 2.5 : 1.5;
+        if (this.type === 'conflict') ctx.setLineDash([6, 4]);
+        else if (this.type === 'eval_disagree') ctx.setLineDash([8, 4]);
+        else if (this.type === 'eval_supplement') ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(fromNode.x, fromNode.y);
+        ctx.lineTo(toNode.x, toNode.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Edge label (for eval edges)
+        if (this.label && isEval) {
+            const mx = (fromNode.x + toNode.x) / 2;
+            const my = (fromNode.y + toNode.y) / 2;
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.fillStyle = color + 'cc';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Background pill
+            const tw = ctx.measureText(this.label).width + 8;
+            ctx.fillStyle = '#0a0a0f';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(mx - tw/2, my - 8, tw, 16, 8);
+            } else {
+                ctx.rect(mx - tw/2, my - 8, tw, 16);
+            }
+            ctx.fill();
+            ctx.fillStyle = color + 'cc';
+            ctx.fillText(this.label, mx, my);
+        }
+
+        // Flowing dot
+        const dx = toNode.x - fromNode.x;
+        const dy = toNode.y - fromNode.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+            const t = ((this.flowOffset % 100) / 100);
+            const px = fromNode.x + dx * t;
+            const py = fromNode.y + dy * t;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(px, py, isEval ? 2.5 : this.type === 'conflict' ? 3 : 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+// ── Particle System ──
+class Particle {
+    constructor() { this.reset(); }
+    reset() {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.alpha = Math.random() * 0.3;
+        this.life = Math.random();
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.001;
+        if (this.life <= 0 || this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+    }
+    draw(ctx) {
+        ctx.fillStyle = `rgba(100,140,200,${this.alpha * this.life})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ── State ──
+const nodes = new Map();
+const edges = [];
+const particles = Array.from({ length: 80 }, () => new Particle());
+let stats = { agents: 0, tools: 0, tokens: 0 };
+const roundLog = []; // [{round, type, ...fields, timestamp}, ...]
+
+// ── Zoom & Pan ──
+let camX = 0, camY = 0, camZoom = 1;
+let _dragging = false, _dragStartX = 0, _dragStartY = 0, _camStartX = 0, _camStartY = 0;
+let _dragNode = null, _dragNodeOffX = 0, _dragNodeOffY = 0;
+
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.3, Math.min(3, camZoom * zoomFactor));
+    // Zoom toward mouse position
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    camX = mx - (mx - camX) * (newZoom / camZoom);
+    camY = my - (my - camY) * (newZoom / camZoom);
+    camZoom = newZoom;
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    const hit = hitTest(world.x, world.y);
+    if (hit) {
+        // Drag the node
+        _dragNode = hit;
+        _dragNodeOffX = hit.targetX - world.x;
+        _dragNodeOffY = hit.targetY - world.y;
+        canvas.style.cursor = 'grabbing';
+    } else {
+        // Pan camera
+        _dragging = true;
+        _dragStartX = e.clientX;
+        _dragStartY = e.clientY;
+        _camStartX = camX;
+        _camStartY = camY;
+        canvas.style.cursor = 'grabbing';
+    }
+});
+window.addEventListener('mousemove', (e) => {
+    if (_dragNode) {
+        const rect = canvas.getBoundingClientRect();
+        const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+        const newX = world.x + _dragNodeOffX;
+        const newY = world.y + _dragNodeOffY;
+        // Move child nodes (insights and sources) with the parent
+        if (_dragNode.type === 'agent' || _dragNode.type === 'supervisor') {
+            const dx = newX - _dragNode.targetX;
+            const dy = newY - _dragNode.targetY;
+            nodes.forEach((child, childId) => {
+                if (childId.startsWith(_dragNode.id + '_')) {
+                    child.targetX += dx;
+                    child.targetY += dy;
+                    child.x += dx;
+                    child.y += dy;
+                }
+            });
+        }
+        _dragNode.targetX = newX;
+        _dragNode.targetY = newY;
+        _dragNode.x = newX;
+        _dragNode.y = newY;
+    } else if (_dragging) {
+        camX = _camStartX + (e.clientX - _dragStartX);
+        camY = _camStartY + (e.clientY - _dragStartY);
+    }
+});
+window.addEventListener('mouseup', () => {
+    _dragNode = null;
+    _dragging = false;
+    canvas.style.cursor = 'default';
+});
+
+// Convert screen coords to world coords
+function screenToWorld(sx, sy) {
+    return { x: (sx - camX) / camZoom, y: (sy - camY) / camZoom };
+}
+
+// ── Fission Burst Particles ──
+const burstParticles = [];
+function emitBurst(x, y, color, count = 20) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 3;
+        burstParticles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            decay: 0.015 + Math.random() * 0.02,
+            color,
+            size: 1 + Math.random() * 2,
+        });
+    }
+}
+
+// ── Animation Loop ──
+function animate() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background gradient (always full screen, not affected by camera)
+    const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+    bg.addColorStop(0, '#0f0f1a');
+    bg.addColorStop(1, '#0a0a0f');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Particles (background, not affected by camera)
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+
+    // Apply camera transform
+    ctx.save();
+    ctx.translate(camX, camY);
+    ctx.scale(camZoom, camZoom);
+
+    // Edges
+    edges.forEach(e => { e.update(); e.draw(ctx); });
+
+    // Nodes
+    nodes.forEach(n => { n.update(); n.draw(ctx); });
+
+    // Burst particles
+    for (let i = burstParticles.length - 1; i >= 0; i--) {
+        const bp = burstParticles[i];
+        bp.x += bp.vx;
+        bp.y += bp.vy;
+        bp.vx *= 0.96;
+        bp.vy *= 0.96;
+        bp.life -= bp.decay;
+        if (bp.life <= 0) { burstParticles.splice(i, 1); continue; }
+        ctx.globalAlpha = bp.life * 0.8;
+        ctx.fillStyle = bp.color;
+        ctx.beginPath();
+        ctx.arc(bp.x, bp.y, bp.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(animate);
+}
+animate();
+
+// ═══════════════════════════════════════════
+//  Fission Layout
+// ═══════════════════════════════════════════
+function layoutFission(agentSpecs) {
+    // Supervisor at center
+    const cx = W / 2;
+    const cy = H / 2 - 30;
+
+    if (!nodes.has('supervisor')) {
+        const sup = new Node('supervisor', '主分析师', 'supervisor', '', cx, cy - 200);
+        sup.color = '#7b2ff7';
+        nodes.set('supervisor', sup);
+        // Animate into position
+        setTimeout(() => { nodes.get('supervisor').targetY = cy; }, 100);
+    }
+    const supervisor = nodes.get('supervisor');
+    supervisor.status = 'done';
+    supervisor.progress = 1;
+
+    // Agents in a circle around center
+    const count = agentSpecs.length;
+    const radius = Math.min(280, W * 0.25);
+    agentSpecs.forEach((spec, i) => {
+        const angle = -Math.PI / 2 + (Math.PI * 2 * i) / count;
+        const x = cx + Math.cos(angle) * radius;
+        const y = cy + Math.sin(angle) * radius;
+
+        const node = new Node(spec.name, spec.name, 'agent', spec.methodology || '', cx, cy);
+        node.targetX = x;
+        node.targetY = y;
+        nodes.set(spec.name, node);
+
+        // Edge from supervisor
+        edges.push(new Edge('supervisor', spec.name, 'fission'));
+
+        // Burst particles from supervisor toward agent
+        const color = getAgentColor(spec.name);
+        setTimeout(() => emitBurst(cx, cy, color, 15), i * 150);
+
+        stats.agents++;
+    });
+    updateStats();
+}
+
+function addToolNode(agentId, toolName) {
+    const agentNode = nodes.get(agentId);
+    if (!agentNode) return;
+
+    const toolId = `${agentId}_${toolName}_${Date.now()}`;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 30;
+    const node = new Node(
+        toolId, toolName, 'tool', 'tool',
+        agentNode.x, agentNode.y
+    );
+    node.targetX = agentNode.targetX + Math.cos(angle) * dist;
+    node.targetY = agentNode.targetY + Math.sin(angle) * dist;
+    node.radius = 12;
+    nodes.set(toolId, node);
+    edges.push(new Edge(agentId, toolId, 'tool'));
+
+    stats.tools++;
+    updateStats();
+}
+
+function addSynthesisNode() {
+    const cx = W / 2;
+    const cy = H / 2 + 200;
+    const node = new Node('synthesis', '汇报', 'synthesis', '', cx, cy + 100);
+    node.targetY = cy;
+    nodes.set('synthesis', node);
+
+    // Connect all agent nodes to synthesis
+    nodes.forEach((n, id) => {
+        if (n.type === 'agent' && n.status === 'done') {
+            edges.push(new Edge(id, 'synthesis', 'synthesis'));
+        }
+    });
+}
+
+function addConflictEdge(agentA, agentB) {
+    edges.push(new Edge(agentA, agentB, 'conflict'));
+}
+
+let _timerStart = 0;
+let _timerInterval = null;
+
+function startTimer() {
+    _timerStart = Date.now();
+    if (_timerInterval) clearInterval(_timerInterval);
+    _timerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - _timerStart) / 1000).toFixed(1);
+        document.getElementById('stat-timer').textContent = elapsed + 's';
+    }, 100);
+}
+
+function stopTimer() {
+    if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+    const elapsed = ((Date.now() - _timerStart) / 1000).toFixed(1);
+    document.getElementById('stat-timer').textContent = elapsed + 's ✓';
+}
+
+function updateStats() {
+    document.getElementById('stat-agents').textContent = stats.agents;
+    document.getElementById('stat-tools').textContent = stats.tools;
+    document.getElementById('stat-tokens').textContent = stats.tokens > 1000
+        ? (stats.tokens / 1000).toFixed(1) + 'k' : stats.tokens;
+}
+
+// ═══════════════════════════════════════════
+//  SSE Integration
+// ═══════════════════════════════════════════
+let eventSource = null;
+
+async function startThink() {
+    const input = document.getElementById('question');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const btn = document.getElementById('btn-go');
+    btn.disabled = true;
+
+    // Clear previous
+    nodes.clear();
+    edges.length = 0;
+    stats = { agents: 0, tools: 0, tokens: 0 };
+    updateStats();
+    closePanel();
+
+    try {
+        // Start thinking
+        const resp = await fetch('/api/think', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, scenario_hint: currentScenarioHint, max_rounds: 4 }),
+        });
+        const { session_id } = await resp.json();
+
+        // Connect SSE
+        startTimer();
+        connectSSE(session_id);
+        showPhase('正在分析问题...');
+
+    } catch (err) {
+        console.error('Failed to start:', err);
+        btn.disabled = false;
+        showPhase('');
+    }
+}
+
+function connectSSE(sessionId) {
+    if (eventSource) eventSource.close();
+    eventSource = new EventSource(`/api/think/stream?session_id=${sessionId}`);
+
+    const handlers = {
+        phase(d) {
+            const labels = {
+                planning: '🧠 主分析师正在设计调研团队...',
+                exploring: '🔍 专家正在并行调研...',
+                judging: '🧐 主分析师正在评判结果...',
+                synthesizing: '⚡ 正在汇报所有发现...',
+                deep_drilling: '🔬 正在深钻分析...',
+            };
+            showPhase(labels[d.phase] || d.phase);
+
+            // Log exploring phase
+            if (d.phase === 'exploring') {
+                roundLog.push({
+                    round: d.round || 1,
+                    type: 'exploring',
+                    running: d.running,
+                    total_agents: d.total_agents,
+                    timestamp: new Date().toLocaleTimeString('zh-CN'),
+                });
+                refreshRoundLogIfOpen();
+            }
+
+            // Update round indicator
+            if ((d.phase === 'exploring' || d.phase === 'judging') && d.round != null) {
+                const roundEl = document.getElementById('stat-round');
+                roundEl.style.display = '';
+                document.getElementById('round-current').textContent = d.round;
+                if (d.max_rounds) document.getElementById('round-max').textContent = d.max_rounds;
+            }
+
+            // Supervisor glow during judging
+            const sup = nodes.get('supervisor');
+            if (sup) {
+                if (d.phase === 'judging') {
+                    sup.status = 'thinking';
+                } else if (d.phase === 'synthesizing') {
+                    sup.status = 'done';
+                }
+            }
+        },
+
+        fission(d) {
+            layoutFission(d.agents);
+        },
+
+        judgment(d) {
+            roundLog.push({
+                round: d.round,
+                type: 'judgment',
+                assessment: d.assessment,
+                is_sufficient: d.is_sufficient,
+                actions: d.actions || [],
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+            // Supervisor pulses
+            const sup = nodes.get('supervisor');
+            if (sup) {
+                sup.status = 'thinking';
+                emitBurst(sup.x, sup.y, '#7b2ff7', 15);
+            }
+            // Show assessment as floating text (handled via phase indicator)
+            if (d.assessment) {
+                showPhase('🧐 ' + (d.assessment.length > 40 ? d.assessment.slice(0, 39) + '…' : d.assessment));
+                setTimeout(() => {
+                    if (d.is_sufficient) {
+                        if (sup) sup.status = 'done';
+                    }
+                }, 4000);
+            }
+            if (d.is_sufficient) {
+                if (sup) sup.status = 'done';
+            }
+            if (d.is_sufficient) {
+                updateActivityFeed('✅ 主分析师判定：结果充分，进入汇报');
+            } else {
+                const actionCount = (d.actions || []).length;
+                updateActivityFeed(`⚠️ 主分析师判定：需补充调研，${actionCount} 个调整`);
+            }
+        },
+
+        agent_spawn(d) {
+            roundLog.push({
+                round: roundLog.length > 0 ? roundLog[roundLog.length - 1].round : 1,
+                type: 'spawn',
+                name: d.name,
+                reason: d.reason,
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+            const sup = nodes.get('supervisor');
+            const cx = sup ? sup.x : W / 2;
+            const cy = sup ? sup.y : H / 2 - 30;
+
+            // Find open angle
+            const existingAgents = [];
+            nodes.forEach(n => { if (n.type === 'agent') existingAgents.push(n); });
+            const angle = existingAgents.length > 0
+                ? -Math.PI / 2 + (Math.PI * 2 * existingAgents.length) / (existingAgents.length + 1)
+                : -Math.PI / 2;
+            const radius = Math.min(280, W * 0.25);
+            const x = (sup ? sup.targetX : cx) + Math.cos(angle) * radius;
+            const y = (sup ? sup.targetY : cy) + Math.sin(angle) * radius;
+
+            const node = new Node(d.agent_id, d.name || d.agent_id, 'agent', d.methodology || '', cx, cy);
+            node.targetX = x;
+            node.targetY = y;
+            nodes.set(d.agent_id, node);
+            edges.push(new Edge('supervisor', d.agent_id, 'fission'));
+            emitBurst(cx, cy, getAgentColor(d.agent_id), 15);
+
+            // Show "NEW" label for 2 seconds
+            node.activity = 'NEW';
+            setTimeout(() => { if (node.activity === 'NEW') node.activity = ''; }, 2000);
+
+            stats.agents++;
+            updateStats();
+            updateActivityFeed(`➕ 新增专家：${d.name}`);
+        },
+
+        agent_redirect(d) {
+            roundLog.push({
+                round: roundLog.length > 0 ? roundLog[roundLog.length - 1].round : 1,
+                type: 'redirect',
+                agent_id: d.agent_id,
+                new_direction: d.new_direction,
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                // Flash orange
+                const origColor = node.color;
+                node.color = '#ffaa00';
+                setTimeout(() => { node.color = origColor; }, 1000);
+                // Reset progress and status
+                node.progress = 0;
+                node.status = 'thinking';
+                node.activity = d.new_direction || '重定向...';
+                node.finding = '';
+                node.confidence = 0;
+                emitBurst(node.x, node.y, '#ffaa00', 12);
+            }
+            updateActivityFeed(`🔄 ${d.agent_id} 重定向`);
+        },
+
+        agent_dropped(d) {
+            roundLog.push({
+                round: roundLog.length > 0 ? roundLog[roundLog.length - 1].round : 1,
+                type: 'drop',
+                agent_id: d.agent_id,
+                reason: d.reason,
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                // Fade out over 1 second
+                node.targetAlpha = 0;
+                node.color = '#333';
+                // Reduce alpha on edges to this node
+                edges.forEach(e => {
+                    if (e.to === d.agent_id || e.from === d.agent_id) {
+                        e.targetAlpha = 0.1;
+                    }
+                });
+                // Remove from nodes array after animation
+                setTimeout(() => {
+                    nodes.delete(d.agent_id);
+                }, 1200);
+            }
+        },
+
+        agent_thinking(d) {
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                node.status = 'thinking';
+                node.activity = '思考中...';
+                // Animate progress
+                const tick = setInterval(() => {
+                    if (node.status !== 'thinking') { clearInterval(tick); return; }
+                    node.progress = Math.min(node.progress + 0.01, 0.95);
+                }, 100);
+            }
+        },
+
+        agent_model_done(d) {
+            stats.tokens += d.tokens || 0;
+            updateStats();
+            const node = nodes.get(d.agent_id);
+            if (node && node.status === 'thinking') {
+                node.activity = '整理结论...';
+            }
+        },
+
+        tool_call(d) {
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                node.status = 'thinking';
+                // Only show activity for non-search tools
+                if (d.tool !== 'web_search') {
+                    node.activity = '🔧 ' + d.tool;
+                }
+                node.toolHistory.push({ tool: d.tool, args: d.args });
+            }
+            stats.tools++;
+            updateStats();
+            updateActivityFeed(`🔍 ${d.agent_id} 正在搜索 "${(d.args || '').substring(0, 30)}..."`);
+            roundLog.push({
+                round: document.getElementById('round-current')?.textContent || '1',
+                type: 'tool_call',
+                agent: d.agent_id,
+                tool: d.tool,
+                query: (d.args || '').substring(0, 50),
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+        },
+
+        tool_result(d) {
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                node.activity = '分析结果...';
+                // Update last tool history with result summary
+                if (node.toolHistory.length > 0) {
+                    node.toolHistory[node.toolHistory.length - 1].result = (d.result_summary || '').slice(0, 100);
+                }
+                // Collect sources from web searches
+                if (d.sources && d.sources.length > 0) {
+                    d.sources.forEach(s => {
+                        if (!node.sources.find(x => x.url === s.url)) {
+                            node.sources.push(s);
+                        }
+                    });
+                }
+            }
+            const srcCount = (d.sources || []).length;
+            const srcText = srcCount > 0 ? `，获取 ${srcCount} 条信源` : '';
+            updateActivityFeed(`📄 ${d.agent_id} 搜索完成${srcText}`);
+        },
+
+        agent_finding(d) {
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                node.status = 'done';
+                node.progress = 1;
+                node.confidence = d.confidence;
+                node.finding = d.finding;
+                node.errorMsg = '';
+                if (d.methodology) node.methodology = d.methodology;
+                if (d.key_points) {
+                    node.keyPoints = d.key_points.map(kp => typeof kp === 'string' ? kp : kp.point);
+                }
+                node.activity = '';
+                if (_detailNodeId === d.agent_id) refreshDetailCard();
+            }
+            const kpCount = Array.isArray(d.key_points) ? d.key_points.length : 0;
+            updateActivityFeed(`✅ ${d.agent_id} 完成调研，${kpCount} 条论据，置信度 ${Math.round(d.confidence * 100)}%`);
+            roundLog.push({
+                round: document.getElementById('round-current')?.textContent || '1',
+                type: 'finding',
+                agent: d.agent_id,
+                finding: (d.finding || '').substring(0, 80),
+                confidence: d.confidence,
+                kpCount: Array.isArray(d.key_points) ? d.key_points.length : 0,
+                sourceCount: Array.isArray(d.sources) ? d.sources.length : 0,
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+            // Create insight nodes from key_points
+            const parentNode = nodes.get(d.agent_id);
+            if (parentNode && d.key_points && d.key_points.length > 0) {
+                d.key_points.forEach((kp, i) => {
+                    // kp can be {point, sources} object or plain string (backward compat)
+                    const pointText = typeof kp === 'string' ? kp : kp.point;
+                    const pointSources = typeof kp === 'string' ? [] : (kp.sources || []);
+
+                    const angle = (Math.PI * 2 / d.key_points.length) * i - Math.PI / 2;
+                    const dist = 120 + Math.random() * 30;
+                    const kpId = `${d.agent_id}_kp_${i}`;
+                    const kpNode = new Node(kpId, pointText, 'insight', '');
+                    kpNode.radius = 14;
+                    kpNode.color = parentNode.color;
+                    kpNode.x = parentNode.targetX;
+                    kpNode.y = parentNode.targetY;
+                    kpNode.targetX = parentNode.targetX + Math.cos(angle) * dist;
+                    kpNode.targetY = parentNode.targetY + Math.sin(angle) * dist;
+                    kpNode.alpha = 0;
+                    kpNode.status = 'done';
+                    nodes.set(kpId, kpNode);
+                    edges.push(new Edge(d.agent_id, kpId, 'knowledge'));
+
+                    // Create source nodes connected to THIS insight node
+                    pointSources.forEach((src, j) => {
+                        const srcAngle = angle + (j - (pointSources.length - 1) / 2) * 0.4;
+                        const srcDist = 55 + Math.random() * 15;
+                        const srcId = `${kpId}_src_${j}`;
+                        const srcLabel = src.replace(/https?:\/\//, '').split('/')[0].slice(0, 15);
+                        const srcNode = new Node(srcId, srcLabel, 'source', '');
+                        srcNode.radius = 8;
+                        srcNode.color = '#556677';
+                        srcNode.x = kpNode.targetX;
+                        srcNode.y = kpNode.targetY;
+                        srcNode.targetX = kpNode.targetX + Math.cos(srcAngle) * srcDist;
+                        srcNode.targetY = kpNode.targetY + Math.sin(srcAngle) * srcDist;
+                        srcNode.alpha = 0;
+                        srcNode.status = 'done';
+                        srcNode.sourceUrl = src;
+                        nodes.set(srcId, srcNode);
+                        edges.push(new Edge(kpId, srcId, 'knowledge'));
+                    });
+                });
+            }
+        },
+
+        agent_error(d) {
+            const node = nodes.get(d.agent_id);
+            if (node) {
+                node.status = 'error';
+                node.errorMsg = d.error || '未知错误';
+                node.activity = '出错';
+            }
+            roundLog.push({
+                round: document.getElementById('round-current')?.textContent || '1',
+                type: 'agent_error',
+                agent: d.agent_id,
+                error: (d.error || '').substring(0, 80),
+                timestamp: new Date().toLocaleTimeString('zh-CN'),
+            });
+            refreshRoundLogIfOpen();
+        },
+
+        scout_eval(d) {
+            // Create evaluation edge between evaluator and target
+            const stanceEdgeType = {
+                agree: 'eval_agree',
+                disagree: 'eval_disagree',
+                supplement: 'eval_supplement',
+            };
+            const stanceLabels = { agree: '认同', disagree: '质疑', supplement: '补充' };
+            const edgeType = stanceEdgeType[d.stance] || 'eval_supplement';
+            const label = stanceLabels[d.stance] || d.stance;
+            edges.push(new Edge(d.evaluator, d.target, edgeType, label));
+
+            // Store eval on target node
+            const targetNode = nodes.get(d.target);
+            if (targetNode) {
+                targetNode.peerEvals.push({
+                    evaluator: d.evaluator,
+                    evaluator_faction: d.evaluator_faction,
+                    stance: d.stance,
+                    reasoning: d.reasoning,
+                    strengths: d.strengths || [],
+                    weaknesses: d.weaknesses || [],
+                    confidence_suggestion: d.confidence_suggestion,
+                });
+            }
+
+            // Flash effect on target node
+            if (targetNode) {
+                const origColor = targetNode.color;
+                const flashColor = d.stance === 'disagree' ? '#ff4444' : d.stance === 'agree' ? '#44ff88' : '#ffaa00';
+                targetNode.color = flashColor;
+                setTimeout(() => { targetNode.color = origColor; }, 600);
+            }
+
+            // Burst particles along edge
+            const fromNode = nodes.get(d.evaluator);
+            if (fromNode && targetNode) {
+                const color = d.stance === 'disagree' ? '#ff4444' : d.stance === 'agree' ? '#44ff88' : '#ffaa00';
+                emitBurst((fromNode.x + targetNode.x) / 2, (fromNode.y + targetNode.y) / 2, color, 8);
+            }
+        },
+
+        agent_revised(d) {
+            const node = nodes.get(d.agent_id);
+            if (!node) return;
+
+            // Store revised finding
+            node.revisedFinding = {
+                action: d.action,
+                revised_finding: d.revised_finding,
+                original_confidence: d.original_confidence,
+                revised_confidence: d.revised_confidence,
+                response_to_critics: d.response_to_critics,
+                key_points: d.key_points || [],
+            };
+
+            // Animate confidence change
+            const oldConf = node.confidence;
+            const newConf = d.revised_confidence;
+            const steps = 30;
+            let step = 0;
+            const confTick = setInterval(() => {
+                step++;
+                node.confidence = oldConf + (newConf - oldConf) * (step / steps);
+                if (step >= steps) {
+                    node.confidence = newConf;
+                    clearInterval(confTick);
+                }
+            }, 30);
+
+            // Visual feedback based on action
+            if (d.action === 'revise') {
+                // Yellow flash for revision
+                const origColor = node.color;
+                node.color = '#ffaa00';
+                setTimeout(() => { node.color = origColor; }, 1000);
+                emitBurst(node.x, node.y, '#ffaa00', 12);
+            } else if (d.action === 'concede') {
+                // Dim the node slightly
+                node.targetAlpha = 0.7;
+                setTimeout(() => { node.targetAlpha = 1; }, 2000);
+                emitBurst(node.x, node.y, '#ff444488', 8);
+            } else {
+                // maintain — green flash
+                emitBurst(node.x, node.y, '#44ff88', 10);
+            }
+
+            // Update finding text to revised version
+            node.finding = d.revised_finding;
+        },
+
+        conflict(d) {
+            addConflictEdge(d.agent_a, d.agent_b);
+        },
+
+        debate_start(d) {
+            showPhase('辩论中: ' + d.agent_a + ' vs ' + d.agent_b);
+        },
+
+        debate_round(d) {
+            addDebateBubble(d.speaker, d.argument, d.stance, d.round);
+        },
+
+        debate_verdict(d) {
+            showDebateVerdict(d);
+        },
+
+        synthesis(d) {
+            // Set supervisor to done (no synthesis node on canvas)
+            const sup = nodes.get('supervisor');
+            if (sup) sup.status = 'done';
+            stopTimer();
+            showPhase('');
+            document.getElementById('stat-round').style.display = 'none';
+            showResult(d);
+            document.getElementById('btn-go').disabled = false;
+        },
+
+        error(d) {
+            stopTimer();
+            showPhase('❌ ' + d.message);
+            document.getElementById('btn-go').disabled = false;
+        },
+    };
+
+    // Register all event handlers
+    Object.keys(handlers).forEach(evt => {
+        eventSource.addEventListener(evt, (e) => {
+            try {
+                if (!e.data || e.data === 'undefined') return;
+                const data = JSON.parse(e.data);
+                handlers[evt](data);
+            } catch (err) {
+                console.error(`Error handling ${evt}:`, err);
+            }
+        });
+    });
+
+    eventSource.onerror = () => {
+        eventSource.close();
+        eventSource = null;
+        document.getElementById('btn-go').disabled = false;
+    };
+}
+
+// ═══════════════════════════════════════════
+//  UI Helpers
+// ═══════════════════════════════════════════
+let currentScenarioHint = '';
+
+function selectScenario(el) {
+    // Radio behavior: deselect all, select clicked (or deselect if already selected)
+    const wasSelected = el.classList.contains('selected');
+    document.querySelectorAll('.scenario-chip').forEach(c => c.classList.remove('selected'));
+    if (!wasSelected) {
+        el.classList.add('selected');
+        currentScenarioHint = el.dataset.hint;
+    } else {
+        currentScenarioHint = '';
+    }
+}
+
+// ── Rotating Placeholders ──
+const PLACEHOLDERS = [
+    "输入一个热点事件，AI调查团帮你多角度解剖",
+    "输入一只股票，AI分析师团队帮你会诊",
+    "输入一个人物，AI帮你多角度深扒",
+    "任何好奇的问题，AI团队帮你深度调研",
+];
+let _placeholderIdx = 0;
+let _placeholderTimer = null;
+
+function startPlaceholderRotation() {
+    const input = document.getElementById('question');
+    if (_placeholderTimer) clearInterval(_placeholderTimer);
+    _placeholderIdx = 0;
+    input.placeholder = PLACEHOLDERS[0];
+    _placeholderTimer = setInterval(() => {
+        input.classList.add('placeholder-fade');
+        setTimeout(() => {
+            _placeholderIdx = (_placeholderIdx + 1) % PLACEHOLDERS.length;
+            input.placeholder = PLACEHOLDERS[_placeholderIdx];
+            input.classList.remove('placeholder-fade');
+        }, 300);
+    }, 4000);
+}
+
+(function initPlaceholder() {
+    const input = document.getElementById('question');
+    startPlaceholderRotation();
+    input.addEventListener('focus', () => {
+        if (_placeholderTimer) { clearInterval(_placeholderTimer); _placeholderTimer = null; }
+    });
+    input.addEventListener('blur', () => {
+        if (!input.value.trim()) startPlaceholderRotation();
+    });
+})();
+
+function showPhase(text) {
+    const el = document.getElementById('phase');
+    const textEl = document.getElementById('phase-text');
+    if (text) {
+        textEl.textContent = text;
+        el.classList.add('active');
+    } else {
+        el.classList.remove('active');
+    }
+}
+
+function updateActivityFeed(text) {
+    const label = document.getElementById('phase-text');
+    if (!label) return;
+    // Fade transition
+    label.style.transition = 'opacity 0.2s';
+    label.style.opacity = '0';
+    setTimeout(() => {
+        label.textContent = text;
+        label.style.opacity = '1';
+    }, 200);
+}
+
+function markdownToHtml(md) {
+    if (!md) return '';
+    let html = md
+        // Escape HTML
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        // Headers (## → h4, ### → h5)
+        .replace(/^### (.+)$/gm, '<h5 style="color:#ccc;margin:12px 0 6px">$1</h5>')
+        .replace(/^## (.+)$/gm, '<h4 style="color:#ddd;margin:14px 0 8px">$1</h4>')
+        .replace(/^# (.+)$/gm, '<h3 style="color:#eee;margin:16px 0 10px">$1</h3>')
+        // Bold and italic
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code style="background:#1a1a2e;padding:2px 6px;border-radius:3px;font-size:12px">$1</code>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:#00d4ff;text-decoration:none">$1</a>')
+        // Unordered lists
+        .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
+        // Ordered lists
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+        // Tables
+        .replace(/^\|(.+)\|$/gm, (match, content) => {
+            const cells = content.split('|').map(c => c.trim());
+            if (cells.every(c => /^[\-:]+$/.test(c))) return ''; // separator row
+            const tag = 'td';
+            return '<tr>' + cells.map(c => `<${tag} style="padding:6px 12px;border:1px solid #2a2a3e">${c}</${tag}>`).join('') + '</tr>';
+        })
+        // Paragraphs (double newline)
+        .replace(/\n\n/g, '</p><p>')
+        // Single newline within paragraph
+        .replace(/\n/g, '<br>');
+
+    // Wrap consecutive <li> in <ul>
+    html = html.replace(/(<li>.*?<\/li>(?:<br>)?)+/g, (match) => {
+        return '<ul style="margin:8px 0;padding-left:20px">' + match.replace(/<br>/g, '') + '</ul>';
+    });
+    // Wrap consecutive <tr> in <table>
+    html = html.replace(/(<tr>.*?<\/tr>(?:<br>)?)+/g, (match) => {
+        return '<table style="border-collapse:collapse;width:100%;margin:12px 0;font-size:12px">' + match.replace(/<br>/g, '') + '</table>';
+    });
+
+    return '<p>' + html + '</p>';
+}
+
+function showResult(data) {
+    const panel = document.getElementById('result-panel');
+    const content = document.getElementById('result-content');
+
+    // Backward compatibility: old format has `conclusion` but no `executive_summary`
+    if (!data.executive_summary && data.conclusion) {
+        content.innerHTML = buildLegacyReportHTML(data);
+        panel.classList.add('open');
+        return;
+    }
+
+    const timestamp = new Date().toLocaleString('zh-CN');
+    const totalSources = (data.all_sources || []).length;
+
+    let html = '';
+
+    // ── Report Header ──
+    html += `<div class="report-header">`;
+    html += `<h2 class="report-title">${data.title || '深度分析报告'}</h2>`;
+    html += `<div class="report-meta">`;
+    html += `<span>\u{1F4C5} ${timestamp}</span>`;
+    html += `<span>\u{1F504} ${data.total_rounds || 1} 轮调研</span>`;
+    html += `<span>\u{1F465} ${data.total_agents || 0} 位专家</span>`;
+    html += `<span>\u{1F4DA} ${totalSources} 条信源</span>`;
+    html += `</div>`;
+    // Confidence bar
+    const pct = Math.round((data.confidence || 0) * 100);
+    const confColor = pct >= 80 ? '#44ff88' : pct >= 60 ? '#ffaa00' : '#ff4444';
+    html += `<div class="report-confidence">`;
+    html += `<span>综合置信度</span>`;
+    html += `<div class="conf-bar"><div class="conf-fill" style="width:${pct}%;background:${confColor}"></div></div>`;
+    html += `<span style="color:${confColor};font-weight:600">${pct}%</span>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    // ── 总: Executive Summary ──
+    html += `<div class="report-section">`;
+    html += `<h3 class="section-header">\u{1F4CB} 执行摘要</h3>`;
+    html += `<div class="section-body">${markdownToHtml(data.executive_summary)}</div>`;
+    html += `</div>`;
+
+    // ── 分: Expert Sections ──
+    if (data.expert_sections && data.expert_sections.length > 0) {
+        html += `<div class="report-section">`;
+        html += `<h3 class="section-header">\u{1F4D1} 分维度深度分析</h3>`;
+        data.expert_sections.forEach((expert, i) => {
+            const ePct = Math.round((expert.confidence || 0) * 100);
+            const eColor = ePct >= 80 ? '#44ff88' : ePct >= 60 ? '#ffaa00' : '#ff4444';
+            const agentColor = getAgentColor(expert.name);
+            html += `<details class="expert-section" ${i === 0 ? 'open' : ''}>`;
+            html += `<summary>`;
+            html += `<span class="expert-dot" style="background:${agentColor}"></span>`;
+            html += `<span class="expert-name">${expert.name}</span>`;
+            html += `<span class="expert-conf" style="color:${eColor}">${ePct}%</span>`;
+            html += `</summary>`;
+            html += `<div class="expert-body">`;
+            // Methodology
+            if (expert.methodology) {
+                html += `<div class="expert-methodology">${expert.methodology}</div>`;
+            }
+            // Core finding
+            if (expert.finding) {
+                html += `<div class="expert-finding">${expert.finding}</div>`;
+            }
+            // Detailed report (Markdown)
+            if (expert.detailed_report) {
+                html += `<div class="expert-detailed">${markdownToHtml(expert.detailed_report)}</div>`;
+            }
+            // Key points with sources
+            if (expert.key_points && expert.key_points.length > 0) {
+                html += `<div class="expert-kps">`;
+                expert.key_points.forEach(kp => {
+                    const pt = typeof kp === 'string' ? kp : kp.point;
+                    const srcs = typeof kp === 'string' ? [] : (kp.sources || []);
+                    html += `<div class="kp-item">`;
+                    html += `<span class="kp-bullet">\u2022</span>`;
+                    html += `<div><span class="kp-text">${pt}</span>`;
+                    if (srcs.length > 0) {
+                        html += `<div class="kp-sources">`;
+                        srcs.forEach(s => {
+                            const domain = s.replace(/https?:\/\//, '').split('/')[0];
+                            html += `<a href="${s}" target="_blank">${domain}</a>`;
+                        });
+                        html += `</div>`;
+                    }
+                    html += `</div></div>`;
+                });
+                html += `</div>`;
+            }
+            html += `</div></details>`;
+        });
+        html += `</div>`;
+    }
+
+    // ── Risk Assessment ──
+    if (data.risk_assessment) {
+        html += `<div class="report-section">`;
+        html += `<h3 class="section-header">\u26A0\uFE0F 风险评估</h3>`;
+        html += `<div class="section-body">${markdownToHtml(data.risk_assessment)}</div>`;
+        html += `</div>`;
+    }
+
+    // ── Actionable Insights ──
+    if (data.actionable_insights && data.actionable_insights.length > 0) {
+        html += `<div class="report-section">`;
+        html += `<h3 class="section-header">\u{1F4A1} 行动建议</h3>`;
+        html += `<ol class="action-list">`;
+        data.actionable_insights.forEach(a => { html += `<li>${a}</li>`; });
+        html += `</ol>`;
+        html += `</div>`;
+    }
+
+    // ── Dissenting Views ──
+    if (data.dissenting_views && data.dissenting_views.length > 0) {
+        html += `<div class="report-section">`;
+        html += `<h3 class="section-header">\u2694\uFE0F 分歧观点</h3>`;
+        html += `<ul class="dissent-list">`;
+        data.dissenting_views.forEach(d => { html += `<li>${d}</li>`; });
+        html += `</ul>`;
+        html += `</div>`;
+    }
+
+    // ── Sources ──
+    if (data.all_sources && data.all_sources.length > 0) {
+        html += `<div class="report-section">`;
+        html += `<h3 class="section-header">\u{1F4DA} 数据来源 (${data.all_sources.length})</h3>`;
+        // Group by domain
+        const domainMap = {};
+        data.all_sources.forEach(s => {
+            const domain = s.replace(/https?:\/\//, '').split('/')[0];
+            if (!domainMap[domain]) domainMap[domain] = [];
+            domainMap[domain].push(s);
+        });
+        html += `<div class="sources-grid">`;
+        Object.entries(domainMap).forEach(([domain, urls]) => {
+            html += `<div class="source-domain">`;
+            html += `<span class="domain-name">${domain}</span>`;
+            html += `<span class="domain-count">${urls.length}</span>`;
+            html += `</div>`;
+        });
+        html += `</div>`;
+        html += `</div>`;
+    }
+
+    content.innerHTML = html;
+    panel.classList.add('open');
+}
+
+function buildLegacyReportHTML(synthesis) {
+    let html = '';
+
+    // Round/expert summary line
+    const totalRounds = synthesis.total_rounds || '';
+    const totalAgents = synthesis.total_agents || '';
+    if (totalRounds || totalAgents) {
+        html += '<div style="font-size:12px;color:#888;margin-bottom:12px;text-align:center">';
+        if (totalRounds) html += `经过 <span style="color:#7b2ff7;font-weight:600">${totalRounds}</span> 轮调研`;
+        if (totalRounds && totalAgents) html += '，';
+        if (totalAgents) html += `共 <span style="color:#00d4ff;font-weight:600">${totalAgents}</span> 位专家参与`;
+        html += '</div>';
+    }
+
+    // Conclusion
+    html += `<div class="result-section">
+        <h3>\u{1F4CB} 结论</h3>
+        <p>${synthesis.conclusion}</p>
+        <div class="confidence-bar">
+            <div class="confidence-fill" style="width:${synthesis.confidence * 100}%;
+                background:${synthesis.confidence > 0.7 ? '#44ff88' : synthesis.confidence > 0.4 ? '#ffaa00' : '#ff4444'}"></div>
+        </div>
+        <p style="font-size:11px;color:#666;margin-top:4px">汇报置信度: ${(synthesis.confidence * 100).toFixed(0)}%</p>
+    </div>`;
+
+    // Highlights
+    if (synthesis.highlights && synthesis.highlights.length) {
+        html += `<div class="result-section">
+            <h3>\u2728 核心要点</h3>
+            <ul>${synthesis.highlights.map(h => `<li>${h}</li>`).join('')}</ul>
+        </div>`;
+    }
+
+    // Dissent
+    if (synthesis.dissent) {
+        html += `<div class="result-section">
+            <h3>\u2694\uFE0F 分歧</h3>
+            <p>${synthesis.dissent}</p>
+        </div>`;
+    }
+
+    // Agent findings
+    const agentFindings = [];
+    nodes.forEach(n => {
+        if (n.type === 'agent' && n.finding) agentFindings.push(n);
+    });
+    if (agentFindings.length) {
+        html += buildAgentFindingsHTML(agentFindings);
+    }
+
+    return html;
+}
+
+function buildAgentFindingsHTML(agentFindings) {
+    return `<div class="result-section">
+        <h3>🤖 各专家发现</h3>
+        ${agentFindings.map((n, idx) => {
+            // Confidence change display
+            let confDisplay = `${(n.confidence * 100).toFixed(0)}%`;
+            if (n.revisedFinding && n.revisedFinding.original_confidence !== n.revisedFinding.revised_confidence) {
+                const orig = (n.revisedFinding.original_confidence * 100).toFixed(0);
+                const rev = (n.revisedFinding.revised_confidence * 100).toFixed(0);
+                const arrow = n.revisedFinding.revised_confidence > n.revisedFinding.original_confidence ? '↑' : '↓';
+                const arrowColor = n.revisedFinding.revised_confidence > n.revisedFinding.original_confidence ? '#44ff88' : '#ff4444';
+                confDisplay = `<span style="color:#666;text-decoration:line-through">${orig}%</span> <span style="color:${arrowColor}">${rev}% ${arrow}</span>`;
+            }
+
+            // Action badge
+            let actionBadge = '';
+            if (n.revisedFinding) {
+                const actionLabels = { maintain: '坚持', revise: '修正', concede: '让步' };
+                const actionColors = { maintain: '#44ff88', revise: '#ffaa00', concede: '#ff4444' };
+                actionBadge = `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${actionColors[n.revisedFinding.action]}22;color:${actionColors[n.revisedFinding.action]};margin-left:6px">${actionLabels[n.revisedFinding.action] || n.revisedFinding.action}</span>`;
+            }
+
+            return `
+            <details style="margin:8px 0;border-left:2px solid ${n.color};padding-left:10px" ${idx === 0 ? 'open' : ''}>
+                <summary style="font-size:12px;font-weight:600;color:${n.color};cursor:pointer;padding:6px 0">
+                    ${n.label} <span style="color:#888">(${n.methodology || ''})</span>${actionBadge}
+                    <span style="float:right;color:#ffffffaa">${confDisplay}</span>
+                </summary>
+                <p style="font-size:12px;margin:4px 0 6px">${n.finding}</p>
+                ${n.toolHistory && n.toolHistory.length ? `<div style="font-size:10px;color:#666;margin-bottom:4px">🔧 调用: ${n.toolHistory.map(t => t.tool).join(', ')}</div>` : ''}
+                ${n.sources && n.sources.length ? `<div style="font-size:10px;margin-top:4px;padding-top:4px;border-top:1px solid #ffffff10">
+                    <span style="color:#888">📎 数据源:</span>
+                    ${n.sources.map(s => {
+                        const domain = s.url ? (() => { try { return new URL(s.url).hostname.replace('www.',''); } catch(e) { return s.url; }})() : '';
+                        return `<a href="${s.url}" target="_blank" rel="noopener" style="display:block;color:#00d4ff;text-decoration:none;margin:2px 0;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${s.url}">🔗 ${s.title || domain} <span style="color:#555">(${domain})</span></a>`;
+                    }).join('')}
+                </div>` : ''}
+                ${n.peerEvals && n.peerEvals.length ? `
+                <details style="margin-top:8px;border-top:1px solid #ffffff10;padding-top:6px">
+                    <summary style="font-size:11px;color:#888;cursor:pointer">📊 收到的评价 (${n.peerEvals.length})</summary>
+                    ${n.peerEvals.map(ev => {
+                        const stanceIcon = ev.stance === 'agree' ? '✅' : ev.stance === 'disagree' ? '❌' : '💡';
+                        const stanceColor = ev.stance === 'agree' ? '#44ff88' : ev.stance === 'disagree' ? '#ff4444' : '#ffaa00';
+                        return `<div style="margin:6px 0;padding:6px 8px;background:${stanceColor}08;border-left:2px solid ${stanceColor};border-radius:0 6px 6px 0">
+                            <div style="font-size:11px;font-weight:600;color:${stanceColor}">${stanceIcon} ${ev.evaluator}</div>
+                            <div style="font-size:11px;color:#aaa;margin-top:2px">${ev.reasoning}</div>
+                            ${ev.strengths.length ? `<div style="font-size:10px;color:#44ff88;margin-top:2px">👍 ${ev.strengths.join('、')}</div>` : ''}
+                            ${ev.weaknesses.length ? `<div style="font-size:10px;color:#ff4444;margin-top:2px">👎 ${ev.weaknesses.join('、')}</div>` : ''}
+                        </div>`;
+                    }).join('')}
+                </details>` : ''}
+                ${n.revisedFinding ? `
+                <details style="margin-top:6px;border-top:1px solid #ffffff10;padding-top:6px">
+                    <summary style="font-size:11px;color:#888;cursor:pointer">🔄 修正说明</summary>
+                    <div style="margin-top:4px;font-size:11px;color:#aaa">
+                        <div style="color:#ffaa00;font-weight:600;margin-bottom:4px">回应: ${n.revisedFinding.response_to_critics}</div>
+                        ${n.revisedFinding.key_points.length ? `<div style="margin-top:4px">修正后论据:<ul style="margin:2px 0;padding-left:16px">${n.revisedFinding.key_points.map(p => `<li style="font-size:10px">${p}</li>`).join('')}</ul></div>` : ''}
+                    </div>
+                </details>` : ''}
+            </details>`;
+        }).join('')}
+    </div>`;
+}
+
+function closePanel() {
+    document.getElementById('result-panel').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════
+//  Debate Visualization
+// ═══════════════════════════════════════════
+function addDebateBubble(speaker, argument, stance, round) {
+    const container = document.getElementById('debate-container');
+    container.classList.add('active');
+
+    const bubble = document.createElement('div');
+    bubble.className = `debate-bubble ${stance}`;
+    const stanceLabels = { support: '支持', oppose: '反驳', concede: '让步' };
+    bubble.innerHTML = `
+        <div class="db-speaker">R${round} | ${speaker}</div>
+        <span class="db-stance">${stanceLabels[stance] || stance}</span>
+        <div>${argument}</div>
+    `;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+
+    // Flash the conflict edge
+    edges.forEach(e => {
+        if (e.type === 'conflict') {
+            e.targetAlpha = 1.0;
+            setTimeout(() => { e.targetAlpha = 0.6; }, 500);
+        }
+    });
+}
+
+function showDebateVerdict(d) {
+    const container = document.getElementById('debate-container');
+    const verdict = document.createElement('div');
+    verdict.className = 'debate-verdict';
+    verdict.innerHTML = `
+        <div class="dv-title">裁决: ${d.winner} 胜出</div>
+        <div>${d.verdict}</div>
+        <div style="margin-top:6px;font-size:11px;color:#888">${d.reasoning}</div>
+    `;
+    container.appendChild(verdict);
+    container.scrollTop = container.scrollHeight;
+
+    // Boost winner node
+    const winnerNode = nodes.get(d.winner);
+    if (winnerNode) {
+        winnerNode.radius = 30;
+        winnerNode.confidence = Math.min(winnerNode.confidence + 0.1, 1.0);
+    }
+}
+
+// ═══════════════════════════════════════════
+//  Node Interactions (Context Menu + Tooltip)
+// ═══════════════════════════════════════════
+let currentSessionId = null;
+let menuTargetNode = null;
+
+function hitTest(mx, my) {
+    // Check small nodes (insight/source) first since they need tighter hit detection
+    for (const [id, node] of nodes) {
+        if (node.type === 'insight' || node.type === 'source') {
+            const dx = mx - node.x, dy = my - node.y;
+            if (dx * dx + dy * dy < (node.radius + 5) * (node.radius + 5)) return node;
+        }
+    }
+    for (const [id, node] of nodes) {
+        if (node.type === 'tool' || node.type === 'insight' || node.type === 'source') continue;
+        const dx = mx - node.x, dy = my - node.y;
+        if (dx * dx + dy * dy < node.radius * node.radius * 1.5) return node;
+    }
+    return null;
+}
+
+// Track drag distance to suppress click after drag
+let _mouseDownPos = null;
+canvas.addEventListener('mousedown', (e) => { _mouseDownPos = { x: e.clientX, y: e.clientY }; });
+
+// Left Click — show detail card on agent nodes, close on empty area
+canvas.addEventListener('click', (e) => {
+    // Suppress click if mouse moved (was a drag)
+    if (_mouseDownPos) {
+        const dx = e.clientX - _mouseDownPos.x, dy = e.clientY - _mouseDownPos.y;
+        if (dx * dx + dy * dy > 25) { _mouseDownPos = null; return; }
+    }
+    _mouseDownPos = null;
+    const rect = canvas.getBoundingClientRect();
+    const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    const node = hitTest(world.x, world.y);
+
+    // Source node click — open URL in new tab
+    if (node && node.type === 'source' && node.sourceUrl) {
+        window.open(node.sourceUrl, '_blank', 'noopener');
+        return;
+    }
+
+    // Insight node click — show full text popup
+    if (node && node.type === 'insight') {
+        showInsightPopup(node.label, e.clientX, e.clientY);
+        return;
+    }
+
+    // Agent node left-click — show detail card
+    if (node && node.type === 'agent') {
+        showDetailCard(node, e.clientX, e.clientY);
+        return;
+    }
+
+    // Clicked on empty area — close detail card
+    hideDetailCard();
+});
+
+// Right Click — disabled (actions are now in the detail card)
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+});
+
+// Close detail card and round log on outside click
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#canvas') && !e.target.closest('.detail-card')) {
+        hideDetailCard();
+    }
+    if (!e.target.closest('.round-log-panel') && !e.target.closest('#stat-round')) {
+        hideRoundLog();
+    }
+});
+
+// ── Detail Card ──
+let _detailNodeId = null;
+function refreshDetailCard() {
+    if (!_detailNodeId) return;
+    const node = nodes.get(_detailNodeId);
+    if (!node) return;
+    const card = document.getElementById('detailCard');
+    if (card.style.display === 'none') return;
+    const rect = card.getBoundingClientRect();
+    showDetailCard(node, rect.left + rect.width / 2, rect.top);
+}
+function showDetailCard(node, clientX, clientY) {
+    _detailNodeId = node.id;
+    const card = document.getElementById('detailCard');
+
+    let html = `<button class="close-btn" onclick="hideDetailCard()">&times;</button>`;
+    html += `<h4 style="color:${node.color}">${node.label}</h4>`;
+
+    // Action buttons (only for done agent nodes)
+    if (node.status === 'done' && node.type === 'agent') {
+        html += `<div class="card-actions">`;
+        html += `<button class="card-action-btn drill" onclick="hideDetailCard(); menuTargetNode=nodes.get('${node.id}'); menuAction('deep_drill')">&#x1F52C; 深钻</button>`;
+        html += `<button class="card-action-btn redirect" onclick="hideDetailCard(); showRedirectPrompt('${node.id}')">&#x1F504; 重定向</button>`;
+        html += `<button class="card-action-btn dismiss" onclick="hideDetailCard(); menuTargetNode=nodes.get('${node.id}'); menuAction('dismiss')">&#x274C; 移除</button>`;
+        html += `</div>`;
+    }
+
+    if (node.errorMsg) {
+        html += `<div style="color:#ff4444;font-size:12px;padding:8px 12px;background:rgba(255,68,68,0.1);border-radius:6px;margin-bottom:12px">
+            &#x274C; 错误: ${node.errorMsg}
+        </div>`;
+    }
+
+    if (node.methodology) {
+        html += `<div class="methodology">${node.methodology}</div>`;
+    }
+
+    if (node.finding) {
+        html += `<div class="finding">${node.finding}</div>`;
+    }
+
+    if (node.confidence !== undefined && node.confidence > 0) {
+        const pct = Math.round(node.confidence * 100);
+        const color = pct >= 80 ? '#44ff88' : pct >= 60 ? '#ffaa00' : '#ff4444';
+        html += `<div class="confidence-row">
+            <span>置信度</span>
+            <div class="confidence-bar"><div class="confidence-fill" style="width:${pct}%;background:${color}"></div></div>
+            <span style="color:${color}">${pct}%</span>
+        </div>`;
+    }
+
+    if (node.keyPoints && node.keyPoints.length > 0) {
+        html += `<div class="section-title">关键论据</div>`;
+        html += `<ul class="kp-list">`;
+        node.keyPoints.forEach(kp => { html += `<li>${kp}</li>`; });
+        html += `</ul>`;
+    }
+
+    if (node.sources && node.sources.length > 0) {
+        html += `<div class="section-title">信息来源</div>`;
+        html += `<div class="sources-list">`;
+        node.sources.forEach(src => {
+            if (src.url) {
+                const domain = src.url.replace(/https?:\/\//, '').split('/')[0];
+                html += `<a href="${src.url}" target="_blank" title="${src.url}">${src.title || domain}</a>`;
+            } else if (src.title) {
+                html += `<span style="color:#aaa;font-size:12px;display:block;margin:4px 0">${src.title}</span>`;
+            }
+        });
+        html += `</div>`;
+    }
+
+    if (node.peerEvals && node.peerEvals.length > 0) {
+        html += `<div class="section-title">同行评议</div>`;
+        html += `<div style="font-size:12px">`;
+        node.peerEvals.forEach(ev => {
+            const stanceColor = ev.stance === 'agree' ? '#44ff88' : ev.stance === 'disagree' ? '#ff4444' : '#ffaa00';
+            const stanceLabel = ev.stance === 'agree' ? '认同' : ev.stance === 'disagree' ? '质疑' : '补充';
+            html += `<div style="margin:4px 0;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px">`;
+            html += `<span style="color:${stanceColor};font-weight:600;font-size:11px">${stanceLabel}</span>`;
+            html += ` <span style="color:#888;font-size:11px">by ${ev.evaluator || '匿名'}</span>`;
+            if (ev.reasoning) html += `<div style="color:#aaa;font-size:11px;margin-top:2px">${ev.reasoning}</div>`;
+            html += `</div>`;
+        });
+        html += `</div>`;
+    }
+
+    if (node.revisedFinding) {
+        const actionLabels = { maintain: '坚持原观点', revise: '已修正', concede: '已让步' };
+        const actionColors = { maintain: '#44ff88', revise: '#ffaa00', concede: '#ff4444' };
+        html += `<div class="section-title">修正状态</div>`;
+        html += `<div style="color:${actionColors[node.revisedFinding.action]};font-size:12px;font-weight:600;margin-bottom:4px">${actionLabels[node.revisedFinding.action]}</div>`;
+        if (node.revisedFinding.response_to_critics) {
+            html += `<div style="color:#aaa;font-size:12px">${node.revisedFinding.response_to_critics}</div>`;
+        }
+    }
+
+    if (node.toolHistory && node.toolHistory.length > 0) {
+        html += `<div class="section-title">工具调用 (${node.toolHistory.length})</div>`;
+        html += `<div style="font-size:11px;color:#777">`;
+        node.toolHistory.slice(-5).forEach(t => {
+            const args = typeof t.args === 'string' ? t.args : (t.args?.query || JSON.stringify(t.args) || '');
+            html += `<div style="margin:2px 0">\u{1F527} ${t.tool}: ${args.slice(0, 40)}</div>`;
+        });
+        if (node.toolHistory.length > 5) html += `<div>...共${node.toolHistory.length}次调用</div>`;
+        html += `</div>`;
+    }
+
+    card.innerHTML = html;
+
+    // Position: prefer right of click, adjust if out of viewport
+    let left = clientX + 16;
+    let top = clientY - 20;
+    if (left + 400 > window.innerWidth) left = clientX - 400;
+    if (top + 500 > window.innerHeight) top = window.innerHeight - 520;
+    if (top < 10) top = 10;
+
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.scrollTop = 0;
+    card.style.display = 'block';
+}
+
+function hideDetailCard() {
+    _detailNodeId = null;
+    document.getElementById('detailCard').style.display = 'none';
+}
+
+function showInsightPopup(text, x, y) {
+    const card = document.getElementById('detailCard');
+    card.innerHTML = `
+        <button class="close-btn" onclick="hideDetailCard()">&times;</button>
+        <div style="color:#ddd;font-size:14px;line-height:1.6">${text}</div>
+    `;
+    let left = x + 16;
+    let top = y - 20;
+    if (left + 400 > window.innerWidth) left = x - 400;
+    if (top < 10) top = 10;
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.style.display = 'block';
+}
+
+function showRedirectPrompt(agentId) {
+    const card = document.getElementById('detailCard');
+    card.innerHTML = `
+        <button class="close-btn" onclick="hideDetailCard()">&times;</button>
+        <h4>&#x1F504; 重定向</h4>
+        <p style="color:#888;font-size:12px;margin-bottom:12px">输入新的分析方向：</p>
+        <textarea id="redirectInput" style="width:100%;height:80px;background:#1a1a2e;border:1px solid #2a2a3e;border-radius:8px;color:#ddd;padding:10px;font-size:13px;resize:none" placeholder="例如：重点分析法律风险方面..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:12px">
+            <button onclick="hideDetailCard()" style="flex:1;padding:8px;border-radius:8px;border:1px solid #2a2a3e;background:none;color:#888;cursor:pointer">取消</button>
+            <button onclick="executeRedirect('${agentId}')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ffaa00;background:rgba(255,170,0,0.1);color:#ffaa00;cursor:pointer">确认重定向</button>
+        </div>
+    `;
+}
+
+function executeRedirect(agentId) {
+    const input = document.getElementById('redirectInput');
+    if (input && input.value.trim()) {
+        menuTargetNode = nodes.get(agentId);
+        menuAction('redirect', input.value.trim());
+    }
+    hideDetailCard();
+}
+
+// Hover — show simplified tooltip (name only); detail card handles full info
+canvas.addEventListener('mousemove', (e) => {
+    if (_dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const world = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    const node = hitTest(world.x, world.y);
+    const tooltip = document.getElementById('node-tooltip');
+
+    if (node && node.type === 'agent') {
+        document.getElementById('tt-title').textContent = node.label;
+        document.getElementById('tt-body').textContent = node.status === 'thinking' ? (node.activity || '分析中...') : (node.status === 'done' ? '点击查看详情' : '');
+        document.getElementById('tt-conf').innerHTML = '';
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY - 10) + 'px';
+        tooltip.classList.add('visible');
+        canvas.style.cursor = 'pointer';
+    } else {
+        tooltip.classList.remove('visible');
+        canvas.style.cursor = 'default';
+    }
+});
+
+// Context menu actions
+async function menuAction(action, customPrompt) {
+    document.getElementById('node-menu').classList.remove('open');
+    if (!menuTargetNode || !currentSessionId) return;
+
+    const agentId = menuTargetNode.id;
+
+    if (action === 'dismiss') {
+        // Dismiss locally
+        menuTargetNode.targetAlpha = 0;
+        menuTargetNode.color = '#333';
+        menuTargetNode.status = 'dismissed';
+        // Notify backend
+        await fetch('/api/intervene', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: currentSessionId, agent_id: agentId, action: 'dismiss' }),
+        }); // dismiss doesn't need model settings
+        return;
+    }
+
+    if (action === 'redirect') {
+        if (!customPrompt) return;
+        await doDrill(agentId, 'redirect', customPrompt);
+        return;
+    }
+
+    if (action === 'deep_drill') {
+        await doDrill(agentId, 'deep_drill');
+    }
+}
+
+async function doDrill(agentId, action, prompt) {
+    try {
+        showPhase('正在深钻 ' + agentId + '...');
+        const resp = await fetch('/api/intervene', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: currentSessionId,
+                agent_id: agentId,
+                action: action,
+                prompt: prompt || '',
+                api_key: localStorage.getItem('tf_api_key') || '',
+                base_url: localStorage.getItem('tf_base_url') || 'https://openrouter.ai/api/v1',
+                model: localStorage.getItem('tf_model') || 'stepfun/step-3.5-flash:free',
+                search_provider: localStorage.getItem('tf_search_provider') || '',
+                search_api_key: localStorage.getItem('tf_search_key') || '',
+            }),
+        });
+        const data = await resp.json();
+        if (data.drill_session_id) {
+            connectDrillSSE(data.drill_session_id, agentId);
+        }
+    } catch (err) {
+        console.error('Drill failed:', err);
+        showPhase('');
+    }
+}
+
+function connectDrillSSE(drillSessionId, parentAgentId) {
+    const drillSource = new EventSource(`/api/think/stream?session_id=${drillSessionId}`);
+    const _parse = (e) => {
+        if (!e.data || e.data === 'undefined') return null;
+        try { return JSON.parse(e.data); } catch { return null; }
+    };
+
+    drillSource.addEventListener('phase', (e) => {
+        const d = _parse(e); if (!d) return;
+        const labels = {
+            deep_drilling: '🔬 正在深钻: ' + parentAgentId,
+            routing: '🧠 规划子问题...',
+            exploring: '🔍 子Agent探索中...',
+        };
+        showPhase(labels[d.phase] || d.phase);
+    });
+
+    drillSource.addEventListener('deep_fission', (e) => {
+        const d = _parse(e); if (!d) return;
+        layoutDeepFission(d.parent_id, d.sub_agents);
+        showPhase('🔍 子Agent探索中...');
+    });
+
+    drillSource.addEventListener('agent_thinking', (e) => {
+        const d = _parse(e); if (!d) return;
+        const node = nodes.get(d.agent_id);
+        if (node) {
+            node.status = 'thinking';
+            node.activity = '思考中...';
+            const tick = setInterval(() => {
+                if (node.status !== 'thinking') { clearInterval(tick); return; }
+                node.progress = Math.min(node.progress + 0.01, 0.95);
+            }, 100);
+        }
+    });
+
+    drillSource.addEventListener('agent_model_done', (e) => {
+        const d = _parse(e); if (!d) return;
+        stats.tokens += d.tokens || 0;
+        updateStats();
+        const node = nodes.get(d.agent_id);
+        if (node && node.status === 'thinking') node.activity = '整理结论...';
+    });
+
+    drillSource.addEventListener('tool_call', (e) => {
+        const d = _parse(e); if (!d) return;
+        const node = nodes.get(d.agent_id);
+        if (node) {
+            // Only show activity for non-search tools
+            if (d.tool !== 'web_search') {
+                node.activity = '🔧 ' + d.tool;
+            }
+            node.toolHistory.push({ tool: d.tool, args: d.args });
+        }
+        stats.tools++;
+        updateStats();
+    });
+
+    drillSource.addEventListener('tool_result', (e) => {
+        const d = _parse(e); if (!d) return;
+        const node = nodes.get(d.agent_id);
+        if (node) {
+            node.activity = '分析结果...';
+            if (node.toolHistory.length > 0) {
+                node.toolHistory[node.toolHistory.length - 1].result = (d.result_summary || '').slice(0, 100);
+            }
+            if (d.sources && d.sources.length > 0) {
+                d.sources.forEach(s => {
+                    if (!node.sources.find(x => x.url === s.url)) {
+                        node.sources.push(s);
+                    }
+                });
+            }
+        }
+    });
+
+    drillSource.addEventListener('agent_finding', (e) => {
+        const d = _parse(e); if (!d) return;
+        const node = nodes.get(d.agent_id);
+        if (node) {
+            node.status = 'done';
+            node.progress = 1;
+            node.confidence = d.confidence;
+            node.finding = d.finding;
+            node.errorMsg = '';
+            if (d.methodology) node.methodology = d.methodology;
+            if (d.key_points) {
+                node.keyPoints = d.key_points.map(kp => typeof kp === 'string' ? kp : kp.point);
+            }
+            node.activity = '';
+        }
+        // Create insight nodes from key_points
+        const parentNode = nodes.get(d.agent_id);
+        if (parentNode && d.key_points && d.key_points.length > 0) {
+            d.key_points.forEach((kp, i) => {
+                // kp can be {point, sources} object or plain string (backward compat)
+                const pointText = typeof kp === 'string' ? kp : kp.point;
+                const pointSources = typeof kp === 'string' ? [] : (kp.sources || []);
+
+                const angle = (Math.PI * 2 / d.key_points.length) * i - Math.PI / 2;
+                const dist = 120 + Math.random() * 30;
+                const kpId = `${d.agent_id}_kp_${i}`;
+                const kpNode = new Node(kpId, pointText, 'insight', '');
+                kpNode.radius = 14;
+                kpNode.color = parentNode.color;
+                kpNode.x = parentNode.targetX;
+                kpNode.y = parentNode.targetY;
+                kpNode.targetX = parentNode.targetX + Math.cos(angle) * dist;
+                kpNode.targetY = parentNode.targetY + Math.sin(angle) * dist;
+                kpNode.alpha = 0;
+                kpNode.status = 'done';
+                nodes.set(kpId, kpNode);
+                edges.push(new Edge(d.agent_id, kpId, 'knowledge'));
+
+                // Create source nodes connected to THIS insight node
+                pointSources.forEach((src, j) => {
+                    const srcAngle = angle + (j - (pointSources.length - 1) / 2) * 0.4;
+                    const srcDist = 55 + Math.random() * 15;
+                    const srcId = `${kpId}_src_${j}`;
+                    const srcLabel = src.replace(/https?:\/\//, '').split('/')[0].slice(0, 15);
+                    const srcNode = new Node(srcId, srcLabel, 'source', '');
+                    srcNode.radius = 8;
+                    srcNode.color = '#556677';
+                    srcNode.x = kpNode.targetX;
+                    srcNode.y = kpNode.targetY;
+                    srcNode.targetX = kpNode.targetX + Math.cos(srcAngle) * srcDist;
+                    srcNode.targetY = kpNode.targetY + Math.sin(srcAngle) * srcDist;
+                    srcNode.alpha = 0;
+                    srcNode.status = 'done';
+                    srcNode.sourceUrl = src;
+                    nodes.set(srcId, srcNode);
+                    edges.push(new Edge(kpId, srcId, 'knowledge'));
+                });
+            });
+        }
+    });
+
+    drillSource.addEventListener('agent_error', (e) => {
+        const d = _parse(e); if (!d) return;
+        const node = nodes.get(d.agent_id);
+        if (node) { node.status = 'error'; node.errorMsg = d.error || '未知错误'; node.activity = '出错'; }
+    });
+
+    drillSource.addEventListener('error', (e) => {
+        drillSource.close();
+        showPhase('');
+        // Update synthesis panel with new findings
+        refreshDrillFindings(parentAgentId);
+    });
+
+    drillSource.onerror = () => {
+        drillSource.close();
+        showPhase('');
+        refreshDrillFindings(parentAgentId);
+    };
+}
+
+// After drill completes, update the result panel if it's open
+function refreshDrillFindings(parentAgentId) {
+    const panel = document.getElementById('result-panel');
+    if (!panel.classList.contains('open')) return;
+
+    // Find sub-agent findings (nodes that connect from parent)
+    const subFindings = [];
+    nodes.forEach(n => {
+        if (n.type === 'agent' && n.finding) {
+            // Check if this node has an edge from parentAgentId
+            const hasParentEdge = edges.some(e => e.from === parentAgentId && e.to === n.id && e.type === 'fission');
+            if (hasParentEdge) subFindings.push(n);
+        }
+    });
+    if (subFindings.length === 0) return;
+
+    // Append drill results to panel
+    const content = document.getElementById('result-content');
+    const parentNode = nodes.get(parentAgentId);
+    let html = `<div class="result-section" style="border-left:3px solid ${parentNode ? parentNode.color : '#7b2ff7'}">
+        <h3>🔬 深钻: ${parentAgentId}</h3>
+        ${subFindings.map(n => `
+            <details style="margin:8px 0;border-left:2px solid ${n.color};padding-left:10px">
+                <summary style="font-size:12px;font-weight:600;color:${n.color};cursor:pointer;padding:6px 0">
+                    ${n.label} <span style="color:#888">(${n.methodology || ''})</span>
+                    <span style="float:right;color:#ffffffaa">${(n.confidence * 100).toFixed(0)}%</span>
+                </summary>
+                <p style="font-size:12px;margin:4px 0 6px">${n.finding}</p>
+                ${n.toolHistory && n.toolHistory.length ? `<div style="font-size:10px;color:#666;margin-bottom:4px">🔧 调用: ${n.toolHistory.map(t => t.tool).join(', ')}</div>` : ''}
+            </details>
+        `).join('')}
+    </div>`;
+    content.insertAdjacentHTML('beforeend', html);
+}
+
+function layoutDeepFission(parentId, subAgents) {
+    const parentNode = nodes.get(parentId);
+    if (!parentNode) return;
+
+    // Burst particles from parent
+    emitBurst(parentNode.targetX, parentNode.targetY, parentNode.color, 25);
+
+    // Mark parent as drilled (pulsing ring indicator)
+    parentNode._drilled = true;
+
+    const count = subAgents.length;
+    // Find free direction: away from supervisor and other occupied nodes
+    const supervisor = nodes.get('supervisor');
+    let baseAngle = 0;
+    if (supervisor) {
+        // Point away from supervisor
+        baseAngle = Math.atan2(parentNode.targetY - supervisor.targetY, parentNode.targetX - supervisor.targetX);
+    }
+    const radius = 140;
+    const spread = Math.min(Math.PI * 0.8, (Math.PI * 0.35) * count); // fan spread
+    subAgents.forEach((spec, i) => {
+        const angle = baseAngle - spread / 2 + (spread * i) / Math.max(count - 1, 1);
+        let x = parentNode.targetX + Math.cos(angle) * radius;
+        let y = parentNode.targetY + Math.sin(angle) * radius;
+
+        // Push away from overlapping existing nodes
+        for (const [, other] of nodes) {
+            if (other.id === parentId) continue;
+            const dx = x - other.targetX, dy = y - other.targetY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = 60;
+            if (dist < minDist && dist > 0) {
+                x += (dx / dist) * (minDist - dist);
+                y += (dy / dist) * (minDist - dist);
+            }
+        }
+
+        const node = new Node(spec.name, spec.name, 'agent', spec.methodology || '', parentNode.x, parentNode.y);
+        node.targetX = x;
+        node.targetY = y;
+        node.radius = 20;
+        nodes.set(spec.name, node);
+
+        edges.push(new Edge(parentId, spec.name, 'fission'));
+
+        // Staggered burst per sub-agent
+        const color = getAgentColor(spec.name);
+        setTimeout(() => emitBurst(parentNode.targetX, parentNode.targetY, color, 10), i * 200);
+
+        stats.agents++;
+    });
+    updateStats();
+}
+
+// ═══════════════════════════════════════════
+//  Settings
+// ═══════════════════════════════════════════
+const PRESETS = {
+    openrouter: { base_url: 'https://openrouter.ai/api/v1', model: 'stepfun/step-3.5-flash:free', keyPlaceholder: 'sk-or-v1-xxxxx' },
+    deepseek:   { base_url: 'https://api.deepseek.com/v1',  model: 'deepseek-chat', keyPlaceholder: 'sk-xxxxx' },
+    groq:       { base_url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', keyPlaceholder: 'gsk_xxxxx' },
+    together:   { base_url: 'https://api.together.xyz/v1',  model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', keyPlaceholder: 'xxxxx' },
+    local:      { base_url: 'http://localhost:11434/v1',     model: 'qwen2.5:14b', keyPlaceholder: 'ollama (可留空)' },
+};
+
+function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    document.getElementById('s-baseurl').value = p.base_url;
+    document.getElementById('s-model').value = p.model;
+    document.getElementById('s-apikey').placeholder = p.keyPlaceholder;
+    document.getElementById('settings-status').textContent = '';
+}
+
+const SEARCH_PRESETS = {
+    tavily:     { placeholder: 'tvly-xxxxx', hint: 'Tavily: <a href="https://tavily.com" target="_blank" style="color:#00d4ff">tavily.com</a> 免费注册获取 Key', needKey: true },
+    bing:       { placeholder: 'xxxxx', hint: 'Bing: <a href="https://portal.azure.com" target="_blank" style="color:#00d4ff">Azure</a> 创建 Bing Search 资源', needKey: true },
+    duckduckgo: { placeholder: '', hint: 'DuckDuckGo 无需 API Key，直接可用', needKey: false },
+};
+
+function applySearchPreset(name) {
+    const p = SEARCH_PRESETS[name];
+    if (!p) return;
+    document.getElementById('s-search-provider').value = name;
+    document.getElementById('s-search-key').placeholder = p.placeholder;
+    document.getElementById('s-search-hint').innerHTML = p.hint;
+    const keyField = document.getElementById('search-key-field');
+    keyField.style.display = p.needKey ? '' : 'none';
+    // Highlight active preset
+    document.querySelectorAll('#sp-tavily,#sp-bing,#sp-ddg').forEach(el => el.style.opacity = '0.5');
+    const activeId = name === 'duckduckgo' ? 'sp-ddg' : 'sp-' + name;
+    const active = document.getElementById(activeId);
+    if (active) active.style.opacity = '1';
+}
+
+function openSettings() {
+    document.getElementById('settings-overlay').classList.add('open');
+    // Load from localStorage
+    document.getElementById('s-baseurl').value = localStorage.getItem('tf_base_url') || 'https://openrouter.ai/api/v1';
+    document.getElementById('s-model').value = localStorage.getItem('tf_model') || 'stepfun/step-3.5-flash:free';
+    const savedKey = localStorage.getItem('tf_api_key') || '';
+    if (savedKey) {
+        document.getElementById('s-apikey').placeholder = savedKey.slice(0, 8) + '...' + savedKey.slice(-4);
+    }
+    const sp = localStorage.getItem('tf_search_provider') || 'tavily';
+    applySearchPreset(sp);
+    const savedSearchKey = localStorage.getItem('tf_search_key') || '';
+    if (savedSearchKey) {
+        document.getElementById('s-search-key').placeholder = savedSearchKey.slice(0, 6) + '...' + savedSearchKey.slice(-4);
+    }
+}
+
+function closeSettings() {
+    document.getElementById('settings-overlay').classList.remove('open');
+}
+
+async function saveSettings() {
+    const apiKey = document.getElementById('s-apikey').value.trim();
+    const baseUrl = document.getElementById('s-baseurl').value.trim();
+    const model = document.getElementById('s-model').value.trim();
+    const status = document.getElementById('settings-status');
+
+    if (!baseUrl || !model) {
+        status.textContent = '请填写 Base URL 和模型名称';
+        status.style.color = '#ff4444';
+        return;
+    }
+
+    const searchProvider = document.getElementById('s-search-provider').value;
+    const searchKey = document.getElementById('s-search-key').value.trim();
+
+    // Save to localStorage only — server is stateless
+    localStorage.setItem('tf_base_url', baseUrl);
+    localStorage.setItem('tf_model', model);
+    localStorage.setItem('tf_search_provider', searchProvider);
+    if (apiKey) localStorage.setItem('tf_api_key', apiKey);
+    if (searchKey) localStorage.setItem('tf_search_key', searchKey);
+
+    status.textContent = '已保存: ' + model;
+    status.style.color = '#44ff88';
+    document.getElementById('settings-btn').classList.add('configured');
+    setTimeout(closeSettings, 800);
+}
+
+// Also handle startThink error for missing API key
+const _origStartThink = startThink;
+startThink = async function() {
+    const input = document.getElementById('question');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const btn = document.getElementById('btn-go');
+    btn.disabled = true;
+
+    nodes.clear();
+    edges.length = 0;
+    stats = { agents: 0, tools: 0, tokens: 0 };
+    updateStats();
+    closePanel();
+    const dbc = document.getElementById('debate-container');
+    dbc.innerHTML = ''; dbc.classList.remove('active');
+    // Reset dynamic colors
+    Object.keys(agentColors).forEach(k => delete agentColors[k]);
+    colorIndex = 0;
+    // Hide round indicator and clear round log
+    document.getElementById('stat-round').style.display = 'none';
+    hideRoundLog();
+    roundLog.length = 0;
+
+    const apiKey = localStorage.getItem('tf_api_key') || '';
+    if (!apiKey) {
+        openSettings();
+        document.getElementById('settings-status').textContent = '请先填写 API Key';
+        document.getElementById('settings-status').style.color = '#ff4444';
+        btn.disabled = false;
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/think', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question,
+                scenario_hint: currentScenarioHint,
+                max_rounds: 4,
+                api_key: apiKey,
+                base_url: localStorage.getItem('tf_base_url') || 'https://openrouter.ai/api/v1',
+                model: localStorage.getItem('tf_model') || 'stepfun/step-3.5-flash:free',
+                search_provider: localStorage.getItem('tf_search_provider') || '',
+                search_api_key: localStorage.getItem('tf_search_key') || '',
+            }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            if (err.error) {
+                showPhase('');
+                btn.disabled = false;
+                // Show settings if API key missing
+                if (err.error.includes('API Key')) {
+                    openSettings();
+                    document.getElementById('settings-status').textContent = err.error;
+                    document.getElementById('settings-status').style.color = '#ff4444';
+                }
+                return;
+            }
+        }
+
+        const { session_id } = await resp.json();
+        currentSessionId = session_id;
+        startTimer();
+        connectSSE(session_id);
+        showPhase('正在分析问题...');
+    } catch (err) {
+        console.error('Failed to start:', err);
+        btn.disabled = false;
+        showPhase('');
+    }
+};
+
+// ═══════════════════════════════════════════
+//  Round Log
+// ═══════════════════════════════════════════
+let _roundLogOpen = false;
+
+function refreshRoundLogIfOpen() {
+    if (_roundLogOpen) showRoundLog();
+}
+
+function showRoundLog() {
+    const panel = document.getElementById('roundLogPanel');
+    const content = document.getElementById('roundLogContent');
+    _roundLogOpen = true;
+
+    if (roundLog.length === 0) {
+        content.innerHTML = '<p style="color:#666;font-size:13px;text-align:center;padding:20px">暂无调研日志</p>';
+        panel.style.display = 'block';
+        return;
+    }
+
+    // Group by round
+    const rounds = {};
+    roundLog.forEach(entry => {
+        const r = entry.round || 1;
+        if (!rounds[r]) rounds[r] = [];
+        rounds[r].push(entry);
+    });
+
+    let html = '';
+    Object.entries(rounds).forEach(([roundNum, entries]) => {
+        html += `<div class="log-round-group">`;
+        html += `<div class="log-round-title">Round ${roundNum}</div>`;
+
+        entries.forEach(entry => {
+            if (entry.type === 'exploring') {
+                html += `<div class="log-entry">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">🔍</span>`;
+                html += `<span class="log-text">开始调研，<strong>${entry.running}</strong> 位专家并行执行（共 ${entry.total_agents} 位）</span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'judgment') {
+                html += `<div class="log-entry">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">🧐</span>`;
+                html += `<span class="log-text"><strong>主分析师评判</strong></span>`;
+                html += `</div>`;
+                html += `<div class="log-assessment">${entry.assessment}</div>`;
+
+                // Verdict
+                if (entry.is_sufficient) {
+                    html += `<div class="log-verdict sufficient">✅ 判定：结果充分，进入汇报阶段</div>`;
+                } else {
+                    html += `<div class="log-verdict insufficient">⚠️ 判定：结果不充分，需要补充调研</div>`;
+                }
+
+                // Actions
+                if (entry.actions && entry.actions.length > 0) {
+                    entry.actions.forEach(action => {
+                        html += `<div class="log-action">`;
+                        if (action.type === 'spawn') {
+                            html += `<span class="log-action-badge spawn">新增</span>`;
+                            html += `<span class="log-text" style="color:#aaa">新增专家 <strong>${action.new_spec?.name || '未知'}</strong>：${action.reason}</span>`;
+                        } else if (action.type === 'redirect') {
+                            html += `<span class="log-action-badge redirect">重定向</span>`;
+                            html += `<span class="log-text" style="color:#aaa"><strong>${action.target_agent}</strong> 换方向：${action.reason}</span>`;
+                        } else if (action.type === 'drop') {
+                            html += `<span class="log-action-badge drop">移除</span>`;
+                            html += `<span class="log-text" style="color:#aaa">移除 <strong>${action.target_agent}</strong>：${action.reason}</span>`;
+                        }
+                        html += `</div>`;
+                    });
+                }
+            }
+            else if (entry.type === 'spawn') {
+                html += `<div class="log-entry">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">➕</span>`;
+                html += `<span class="log-text">新增专家 <strong>${entry.name}</strong>：${entry.reason}</span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'redirect') {
+                html += `<div class="log-entry">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">🔄</span>`;
+                html += `<span class="log-text"><strong>${entry.agent_id}</strong> 重定向：${entry.new_direction}</span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'drop') {
+                html += `<div class="log-entry">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">❌</span>`;
+                html += `<span class="log-text">移除 <strong>${entry.agent_id}</strong>：${entry.reason}</span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'tool_call') {
+                html += `<div class="log-entry" style="margin-left:20px">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">🔍</span>`;
+                html += `<span class="log-text"><strong>${entry.agent}</strong> 搜索 "${entry.query}"</span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'finding') {
+                html += `<div class="log-entry" style="margin-left:20px">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">✅</span>`;
+                html += `<span class="log-text"><strong>${entry.agent}</strong> 完成调研：${entry.finding}... <span style="color:#00d4ff">${entry.kpCount}条论据</span> <span style="color:#44ff88">${Math.round(entry.confidence * 100)}%</span> <span style="color:#888">${entry.sourceCount}条信源</span></span>`;
+                html += `</div>`;
+            }
+            else if (entry.type === 'agent_error') {
+                html += `<div class="log-entry" style="margin-left:20px">`;
+                html += `<span class="log-time">${entry.timestamp}</span>`;
+                html += `<span class="log-icon">❌</span>`;
+                html += `<span class="log-text" style="color:#ff4444"><strong>${entry.agent}</strong> 出错：${entry.error}</span>`;
+                html += `</div>`;
+            }
+        });
+
+        html += `</div>`;
+    });
+
+    content.innerHTML = html;
+    panel.style.display = 'block';
+}
+
+function hideRoundLog() {
+    _roundLogOpen = false;
+    document.getElementById('roundLogPanel').style.display = 'none';
+}
+
+// Check if API key is configured on load
+if (localStorage.getItem('tf_api_key')) {
+    document.getElementById('settings-btn').classList.add('configured');
+}
+</script>
+</body>
+</html>
