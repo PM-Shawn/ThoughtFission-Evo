@@ -1,5 +1,7 @@
 # ThoughtFission Evo
 
+[中文文档](README_CN.md)
+
 **Self-evolving multi-agent deep research engine.** Ask a question, AI assembles a professional team, researches in parallel, self-corrects, and delivers a deep analysis report.
 
 Built on [AgentX](https://github.com/anthropics/agentx) framework.
