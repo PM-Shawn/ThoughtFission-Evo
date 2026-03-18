@@ -2,7 +2,7 @@
 
 **自进化多智能体深度调研引擎。** 提出一个问题，AI 自动组建专业团队、并行调研、自我修正，产出深度分析报告。
 
-基于 [AgentX](https://github.com/anthropics/agentx) 框架构建。
+基于 [AgentX](https://github.com/PM-Shawn/AgentX) 框架构建。
 
 ## 工作原理
 
@@ -256,7 +256,7 @@ ThoughtFission-Evo/
 ## 技术栈
 
 - **后端**: Python 3.11+, FastAPI, uvicorn
-- **Agent 框架**: [AgentX](https://github.com/anthropics/agentx)（模型无关、结构化输出、工具调用、流式回调）
+- **Agent 框架**: [AgentX](https://github.com/PM-Shawn/AgentX)（模型无关、结构化输出、工具调用、流式回调）
 - **前端**: 原生 JavaScript + HTML5 Canvas（零依赖）
 - **流式通信**: Server-Sent Events (SSE)
 - **模型**: 任何 OpenAI 兼容 API（OpenRouter、OpenAI、Anthropic、本地 Ollama）

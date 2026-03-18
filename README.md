@@ -4,7 +4,7 @@
 
 **Self-evolving multi-agent deep research engine.** Ask a question, AI assembles a professional team, researches in parallel, self-corrects, and delivers a deep analysis report.
 
-Built on [AgentX](https://github.com/anthropics/agentx) framework.
+Built on [AgentX](https://github.com/PM-Shawn/AgentX) framework.
 
 ## How It Works
 
@@ -237,7 +237,7 @@ ThoughtFission-Evo/
 ## Tech Stack
 
 - **Backend**: Python 3.11+, FastAPI, uvicorn
-- **Agent Framework**: [AgentX](https://github.com/anthropics/agentx) (model-agnostic, structured output, tool use, hooks)
+- **Agent Framework**: [AgentX](https://github.com/PM-Shawn/AgentX) (model-agnostic, structured output, tool use, hooks)
 - **Frontend**: Vanilla JavaScript + HTML5 Canvas (zero dependencies)
 - **Streaming**: Server-Sent Events (SSE)
 - **Model**: Any OpenAI-compatible API (OpenRouter, OpenAI, Anthropic, local Ollama)
